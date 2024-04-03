@@ -9,7 +9,7 @@
 # production
 /build
 
-# /config/serviceAccountKey.json
+/config/serviceAccountKey.json
 
 # misc
 .DS_Store
