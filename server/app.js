@@ -39,7 +39,7 @@ mongoose.connection
     console.log(`Error : ${error}`);
   });
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT;
 
 app.listen(PORT, () => {
   console.log("Listening to port 4000");
