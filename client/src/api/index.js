@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // const baseURL = "http://localhost:4000/";
-const baseURL = "https://music-app-zga8.onrender.com";
+const baseURL = "https://music-app-zga8.onrender.com/";
 
 export const validateUser = async (token) => {
   try {
