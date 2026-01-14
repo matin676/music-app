@@ -1,9 +1,9 @@
 const router = require("express").Router();
 
-const song = require("../models/song");
+const Song = require("../models/song");
 
 router.post("/save", async (req, res) => {
-  const newSong = song({
+  const newSong = new Song({
     name: req.body.name,
     imageURL: req.body.imageURL,
     songURL: req.body.songURL,
@@ -24,7 +24,7 @@ router.post("/save", async (req, res) => {
 router.get("/getone/:id", async (req, res) => {
   const filter = { _id: req.params.id };
 
-  const data = await song.findOne(filter);
+  const data = await Song.findOne(filter);
 
   if (data) {
     return res.status(200).send({ success: true, song: data });
@@ -34,7 +34,7 @@ router.get("/getone/:id", async (req, res) => {
 });
 
 router.get("/getall", async (req, res) => {
-  const data = await song.find().sort({ createdAt: 1 });
+  const data = await Song.find().sort({ createdAt: 1 }).lean();
 
   if (data) {
     return res.status(200).send({ success: true, song: data });
@@ -45,10 +45,10 @@ router.get("/getall", async (req, res) => {
 
 router.put("/update/:id", async (req, res) => {
   const filter = { _id: req.params.id };
-  const options = { upsert: true, new: true };
+  const options = { new: true };
 
   try {
-    const result = await song.findOneAndUpdate(
+    const result = await Song.findOneAndUpdate(
       filter,
       {
         name: req.body.name,
@@ -62,7 +62,11 @@ router.put("/update/:id", async (req, res) => {
       options
     );
 
-    return res.status(200).send({ success: true, data: result });
+    if (result) {
+      return res.status(200).send({ success: true, data: result });
+    } else {
+      return res.status(404).send({ success: false, msg: "Song not found" });
+    }
   } catch (error) {
     return res.status(400).send({ success: false, msg: error });
   }
@@ -71,9 +75,9 @@ router.put("/update/:id", async (req, res) => {
 router.delete("/delete/:id", async (req, res) => {
   const filter = { _id: req.params.id };
 
-  const result = await song.deleteOne(filter);
+  const result = await Song.deleteOne(filter);
 
-  if (result) {
+  if (result.deletedCount === 1) {
     return res
       .status(200)
       .send({ success: true, msg: "Data deleted successfully" });

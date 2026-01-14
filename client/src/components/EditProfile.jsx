@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
-import { MdEdit, MdDelete } from "react-icons/md";
+import { MdDelete, MdCloudUpload } from "react-icons/md";
 import {
   deleteObject,
   getDownloadURL,
@@ -15,6 +15,7 @@ import { getAllUsers, updateProfileById } from "../api";
 import { actionType } from "../context/reducer";
 import AlertSuccess from "./AlertSuccess";
 import AlertError from "./AlertError";
+import SEO from "./SEO";
 
 export default function EditProfile() {
   const [{ user, allUsers }, dispatch] = useStateValue();
@@ -70,12 +71,9 @@ export default function EditProfile() {
 
   const handleDeleteImage = () => {
     if (!editedUser.imageURL) {
-      console.log("No image to delete.");
       return;
     }
-
     const imagePath = editedUser.imageURL.split("?")[0];
-
     const imageRef = ref(storage, imagePath);
 
     deleteObject(imageRef)
@@ -106,7 +104,6 @@ export default function EditProfile() {
       return;
     } else {
       setIsImage(true);
-
       const updatedUserData = {
         name: userName,
         email: userEmail,
@@ -146,7 +143,7 @@ export default function EditProfile() {
             }, 4000);
           }
         })
-        .catch((error) => {
+        .catch(() => {
           setAlert("error");
           setAlertMsg("Network error, please try later");
           setTimeout(() => {
@@ -155,75 +152,114 @@ export default function EditProfile() {
         })
         .finally(() => {
           setIsImage(false);
-          setImageURL("");
-          setUserName("");
-          setUserEmail("");
+          // setImageURL(""); // Don't clear these if we want to show the current state
+          // setUserName("");
+          // setUserEmail("");
         });
     }
   };
 
   return (
-    <div className="w-full flex flex-col items-center justify-center bg-primary overflow-hidden">
+    <div className="w-full min-h-screen flex flex-col bg-transparent">
+      <SEO
+        title="Edit Profile"
+        description="Update your personal information and profile picture."
+      />
       <Header />
-      <div className="flex items-center cursor-pointer gap-16 relative">
-        <MdDelete
-          className="w-6 h-6 cursor-pointer bg-red-600 rounded-full p-1 absolute top-[4.25rem] left-20"
-          onClick={handleDeleteImage}
-        />
-        <label htmlFor="profile-pic">
-          <img
-            src={
-              editedUser.imageURL ? editedUser.imageURL : user?.user?.imageURL
-            }
-            className="w-20 h-20 min-w-[100px] object-cover rounded-full shadow-lg cursor-pointer"
-            alt="profile pic"
-            referrerPolicy="no-referrer"
-          />
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageChange}
-            className="hidden"
-            id="profile-pic"
-          />
-          <MdEdit className="w-6 h-6 cursor-pointer bg-red-600 rounded-full p-1 absolute top-[4.25rem]" />
-        </label>
+      <main className="flex-1 flex items-center justify-center p-6">
+        <div className="w-full max-w-lg bg-white/20 backdrop-blur-xl border border-white/20 shadow-2xl rounded-3xl p-8 flex flex-col items-center gap-6">
+          <h2 className="text-2xl font-bold text-headingColor">Edit Profile</h2>
 
-        <div className="flex flex-col">
-          <input
-            type="text"
-            value={userName}
-            onChange={(e) => setUserName(e.target.value)}
-            placeholder="Type your name here..."
-            className="text-textColor border-none outline-none text-2xl hover:text-headingColor font-semibold bg-transparent"
-          />
-          <input
-            type="email"
-            value={userEmail}
-            onChange={(e) => setUserEmail(e.target.value)}
-            placeholder="Type your email here..."
-            className="text-textColor text-lg border-none outline-none hover:text-headingColor font-textColor flex justify-center items-center bg-transparent"
-          />
+          <div className="relative group">
+            <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-lg">
+              <img
+                src={
+                  editedUser.imageURL
+                    ? editedUser.imageURL
+                    : user?.user?.imageURL
+                }
+                className="w-full h-full object-cover"
+                alt="profile pic"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+
+            <label
+              htmlFor="profile-pic"
+              className="absolute bottom-0 right-0 p-2 bg-blue-500 rounded-full cursor-pointer hover:bg-blue-600 transition-colors shadow-md"
+            >
+              <MdCloudUpload className="text-white text-xl" />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+                id="profile-pic"
+              />
+            </label>
+
+            {editedUser.imageURL && (
+              <div
+                className="absolute top-0 right-0 p-2 bg-red-500 rounded-full cursor-pointer hover:bg-red-600 transition-colors shadow-md"
+                onClick={handleDeleteImage}
+              >
+                <MdDelete className="text-white text-xl" />
+              </div>
+            )}
+          </div>
+
+          <div className="w-full flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-semibold text-gray-600 ml-1">
+                Name
+              </label>
+              <input
+                type="text"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                placeholder="Your Name"
+                className="w-full px-4 py-2 rounded-lg bg-white/40 border border-white/30 focus:border-blue-500 focus:bg-white/60 outline-none text-headingColor transition-all"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-semibold text-gray-600 ml-1">
+                Email
+              </label>
+              <input
+                type="email"
+                value={userEmail}
+                onChange={(e) => setUserEmail(e.target.value)}
+                placeholder="Your Email"
+                className="w-full px-4 py-2 rounded-lg bg-white/40 border border-white/30 focus:border-blue-500 focus:bg-white/60 outline-none text-headingColor transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-4 w-full mt-4">
+            <button
+              onClick={handleSave}
+              className="flex-1 py-2 rounded-xl bg-blue-500 text-white font-semibold hover:bg-blue-600 transition-all shadow-lg hover:shadow-blue-500/30"
+            >
+              Save Changes
+            </button>
+            <NavLink to="/userprofile" className="flex-1">
+              <button className="w-full py-2 rounded-xl bg-gray-500/20 text-headingColor font-semibold hover:bg-gray-500/30 transition-all">
+                Cancel
+              </button>
+            </NavLink>
+          </div>
         </div>
-      </div>
-      <div className="flex gap-2 ml-16">
-        <div className="bg-blue-400 text-headingColor px-4 py-2 rounded-xl hover:bg-blue-600 transition-all ease-in-out duration-150">
-          <button onClick={handleSave}>Update</button>
-        </div>
-        <div className="bg-blue-400 text-headingColor px-4 py-2 rounded-xl hover:bg-blue-600 transition-all ease-in-out duration-150">
-          <NavLink to={"/userprofile"} className="ml-2">
-            Cancel
-          </NavLink>
-        </div>
-      </div>
+      </main>
+
       {alert && (
-        <>
+        <div className="fixed top-20 right-4 z-50">
           {alert === "success" ? (
             <AlertSuccess msg={alertMsg} />
           ) : (
             <AlertError msg={alertMsg} />
           )}
-        </>
+        </div>
       )}
     </div>
   );

@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { MdDelete, MdPlaylistAdd, MdPlaylistAddCheck } from "react-icons/md";
-import { BiCloudUpload } from "react-icons/bi";
+import {
+  MdDelete,
+  MdPlaylistAdd,
+  MdPlaylistAddCheck,
+  MdCloudUpload,
+} from "react-icons/md";
 import {
   deleteObject,
   getDownloadURL,
@@ -17,15 +21,15 @@ import { getAllPlaylist, getAllSongs, savePlaylist } from "../api";
 import { FileLoader } from "./DashboardNewSong";
 import AlertSuccess from "./AlertSuccess";
 import AlertError from "./AlertError";
+import SEO from "./SEO";
 
-export const FileUploader = ({
+export function FileUploader({
   setImageURL,
   setAlert,
   alertMsg,
   isLoading,
-  isImage,
   setProgress,
-}) => {
+}) {
   const uploadFile = (e) => {
     isLoading(true);
     const imageFile = e.target.files[0];
@@ -37,7 +41,6 @@ export const FileUploader = ({
       (snapshot) => {
         setProgress((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
       },
-
       (error) => {
         setAlert("error");
         alertMsg("File upload failed.");
@@ -62,28 +65,91 @@ export const FileUploader = ({
   };
 
   return (
-    <label>
-      <div className="flex flex-col items-center justify-center h-full">
-        <div className="flex flex-col justify-center items-center cursor-pointer">
-          <p className="font-bold text-2xl">
-            <BiCloudUpload />
-          </p>
-          <p className="text-lg">Click to upload an image</p>
-        </div>
+    <label className="flex flex-col items-center justify-center h-full w-full cursor-pointer hover:bg-gray-100/10 transition-colors rounded-xl group relative">
+      <div className="flex flex-col justify-center items-center">
+        <MdCloudUpload className="text-4xl text-gray-500 group-hover:text-blue-500 transition-colors" />
+        <p className="text-sm font-medium text-gray-400 group-hover:text-gray-200 mt-2">
+          Click to upload cover
+        </p>
       </div>
       <input
         type="file"
         name="upload-file"
         accept="image/*"
-        className="w-0 h-0"
+        className="hidden"
         onChange={uploadFile}
       />
     </label>
   );
-};
+}
+
+export function SongContainer({ musics, handleAddToPlaylist, selectedSongs }) {
+  const [{ isSongPlaying, songIndex }, dispatch] = useStateValue();
+
+  const addSongToContext = (index) => {
+    if (!isSongPlaying) {
+      dispatch({ type: actionType.SET_ISSONG_PLAYING, isSongPlaying: true });
+    }
+    if (songIndex !== index) {
+      dispatch({ type: actionType.SET_SONG_INDEX, songIndex: index });
+    }
+  };
+
+  return (
+    <>
+      {musics?.map((data, index) => (
+        <div
+          key={data._id}
+          className={`relative w-full p-3 rounded-xl flex items-center gap-3 transition-all cursor-pointer ${
+            selectedSongs.includes(data._id)
+              ? "bg-blue-500/10 border border-blue-500/30 shadow-md"
+              : "bg-white/30 border border-white/20 hover:bg-white/50"
+          }`}
+          onClick={(e) => {
+            e.stopPropagation();
+            addSongToContext(index);
+          }}
+        >
+          <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 shadow-sm">
+            <img
+              src={data.imageURL}
+              alt={data.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
+
+          <div className="flex flex-col flex-grow min-w-0">
+            <p className="text-headingColor font-semibold truncate">
+              {data.name}
+            </p>
+            <p className="text-xs text-gray-500 truncate">{data.artist}</p>
+          </div>
+
+          <button
+            className={`p-2 rounded-full transition-colors ${
+              selectedSongs.includes(data._id)
+                ? "bg-blue-500 text-white shadow-blue-500/30 shadow-md"
+                : "bg-gray-200 text-gray-500 hover:bg-blue-500 hover:text-white"
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleAddToPlaylist(data._id);
+            }}
+          >
+            {selectedSongs.includes(data._id) ? (
+              <MdPlaylistAddCheck className="text-xl" />
+            ) : (
+              <MdPlaylistAdd className="text-xl" />
+            )}
+          </button>
+        </div>
+      ))}
+    </>
+  );
+}
 
 export default function AddNewPlaylist() {
-  const [{ allSongs, searchTerm, playlist }, dispatch] = useStateValue();
+  const [{ allSongs, searchTerm, user }, dispatch] = useStateValue();
 
   const [playlistName, setPlaylistName] = useState("");
   const [selectedSongs, setSelectedSongs] = useState([]);
@@ -136,39 +202,33 @@ export default function AddNewPlaylist() {
         name: playlistName,
         imageURL: playlistCoverImage,
         songs: selectedSongs,
+        user: user?.user?._id,
       };
       savePlaylist(data).then((res) => {
         getAllPlaylist().then((playlistData) => {
           dispatch({
             type: actionType.SET_ALL_PLAYLISTS,
-            playlistData: playlistData.playlist,
+            playlist: playlistData,
           });
         });
       });
       setIsPlaylist(false);
       setPlaylistCoverImage(null);
       setPlaylistName("");
+      setSelectedSongs([]);
     }
   };
 
   useEffect(() => {
-    if (!allSongs) {
-      getAllSongs().then((data) => {
-        dispatch({
-          type: actionType.SET_ALL_SONGS,
-          allSongs: data.song,
-        });
-      });
-    }
     setFilteredSongs(null);
   }, []);
 
   useEffect(() => {
-    if (searchTerm.length > 0) {
+    if (searchTerm.length > 0 && allSongs) {
       const filtered = allSongs.filter(
         (data) =>
-          data.artist.toLowerCase().includes(searchTerm) ||
-          data.name.toLowerCase().includes(searchTerm)
+          data.artist.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          data.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredSongs(filtered);
     } else {
@@ -177,160 +237,110 @@ export default function AddNewPlaylist() {
   }, [searchTerm, allSongs]);
 
   return (
-    <div className="w-full h-auto flex flex-col items-center justify-center bg-primary">
+    <div className="w-full min-h-screen flex flex-col items-center bg-transparent">
+      <SEO
+        title="Create New Playlist"
+        description="Tailor your music experience by creating a new custom playlist on MusicApp"
+      />
       <Header />
-      <h1 className="text-2xl font-semibold mb-4">AddNewPlayList</h1>
-      <div className="flex items-center justify-center gap-4">
-        <div className="bg-card  backdrop-blur-md w-full lg:w-300 h-300 rounded-md border-2 border-dotted border-gray-300 cursor-pointer">
-          {isPlaylist && <FileLoader progress={playlistProgress} />}
-          {!isPlaylist && (
-            <>
-              {!playlistCoverImage ? (
+
+      <main className="w-full max-w-6xl p-6 flex flex-col gap-8">
+        <h2 className="text-3xl font-bold text-headingColor">
+          Create New Playlist
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white/20 backdrop-blur-xl border border-white/20 p-8 rounded-3xl shadow-xl">
+          <div className="flex flex-col items-center justify-center gap-4">
+            <div className="relative w-full aspect-square max-w-[300px] bg-white/10 border-2 border-dashed border-white/30 rounded-2xl overflow-hidden flex items-center justify-center">
+              {isPlaylist ? (
+                <FileLoader progress={playlistProgress} />
+              ) : !playlistCoverImage ? (
                 <FileUploader
                   setImageURL={setPlaylistCoverImage}
                   setAlert={setAlert}
                   alertMsg={setAlertMsg}
                   isLoading={setIsPlaylist}
                   setProgress={setPlaylistProgress}
-                  isImage={true}
                 />
               ) : (
-                <div className="relative w-full h-full overflow-hidden rounded-md">
+                <div className="relative w-full h-full group">
                   <img
                     src={playlistCoverImage}
-                    alt="uploaded pic"
+                    alt="Playlist Cover Preview"
                     className="w-full h-full object-cover"
                   />
-                  <button
-                    type="button"
-                    className="absolute bottom-3 right-3 p-3 rounded-full bg-red-500 text-xl cursor-pointer outline-none hover:shadow-md  duration-500 transition-all ease-in-out"
-                  >
-                    <MdDelete
-                      className="text-white"
-                      onClick={() => {
-                        deleteImageObject(playlistCoverImage);
-                      }}
-                    />
-                  </button>
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <button
+                      type="button"
+                      className="p-3 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg"
+                      onClick={() => deleteImageObject(playlistCoverImage)}
+                    >
+                      <MdDelete className="text-2xl" />
+                    </button>
+                  </div>
                 </div>
               )}
-            </>
-          )}
-        </div>
-        <div>
-          <input
-            type="text"
-            placeholder="Type your playlist name"
-            className="p-3 rounded-md text-base font-semibold text-textColor outline-none shadow-sm border border-gray-300 bg-transparent w-80"
-            value={playlistName}
-            onChange={(e) => setPlaylistName(e.target.value)}
-          />
-          <p className="my-3 text-textColor font-medium">
-            Songs added to playlist:{" "}
-            <span className="text-2xl">{selectedSongs.length}</span>
-          </p>
-          <button
-            type="button"
-            className="my-3 p-3 rounded-full bg-red-500 text-xl cursor-pointer outline-none hover:shadow-md  duration-500 transition-all ease-in-out"
-            onClick={handleSavePlaylist}
-          >
-            Save Playlist
-          </button>
-        </div>
-      </div>
-      <SearchBar />
+            </div>
+          </div>
 
-      <div className="w-full h-auto flex items-center justify-evenly gap-4 flex-wrap p-4">
-        <SongContainer
-          musics={filteredSongs ? filteredSongs : allSongs}
-          handleAddToPlaylist={handleAddToPlaylist}
-          selectedSongs={selectedSongs}
-        />
-      </div>
+          <div className="flex flex-col justify-center gap-6">
+            <div className="flex flex-col gap-2">
+              <label className="text-headingColor font-semibold ml-1">
+                Playlist Name
+              </label>
+              <input
+                type="text"
+                placeholder="My Awesome Playlist"
+                className="w-full p-4 rounded-xl bg-white/40 border border-white/30 outline-none text-headingColor placeholder-gray-500 font-medium focus:bg-white/60 focus:border-blue-500 transition-all"
+                value={playlistName}
+                onChange={(e) => setPlaylistName(e.target.value)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between bg-white/30 p-4 rounded-xl">
+              <span className="text-headingColor font-medium">
+                Selected Songs
+              </span>
+              <span className="text-2xl font-bold text-blue-600">
+                {selectedSongs.length}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              className="w-full py-4 rounded-xl bg-blue-500 text-white font-bold text-lg hover:bg-blue-600 shadow-lg hover:shadow-blue-500/30 transition-all transform active:scale-95"
+              onClick={handleSavePlaylist}
+            >
+              Create Playlist
+            </button>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-6">
+          <h3 className="text-2xl font-semibold text-headingColor">
+            Add Songs
+          </h3>
+          <SearchBar />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <SongContainer
+              musics={filteredSongs ? filteredSongs : allSongs}
+              handleAddToPlaylist={handleAddToPlaylist}
+              selectedSongs={selectedSongs}
+            />
+          </div>
+        </div>
+      </main>
 
       {alert && (
-        <>
+        <div className="fixed top-20 right-4 z-50">
           {alert === "success" ? (
             <AlertSuccess msg={alertMsg} />
           ) : (
             <AlertError msg={alertMsg} />
           )}
-        </>
+        </div>
       )}
     </div>
   );
 }
-
-export const SongContainer = ({
-  musics,
-  handleAddToPlaylist,
-  selectedSongs,
-}) => {
-  const [{ isSongPlaying, songIndex }, dispatch] = useStateValue();
-
-  const addSongToContext = (index) => {
-    if (!isSongPlaying) {
-      dispatch({
-        type: actionType.SET_ISSONG_PLAYING,
-        isSongPlaying: true,
-      });
-    }
-    if (songIndex !== index) {
-      dispatch({
-        type: actionType.SET_SONG_INDEX,
-        songIndex: index,
-      });
-    }
-  };
-
-  return (
-    <>
-      {musics?.map((data, index) => (
-        <div
-          key={data._id}
-          className="relative w-full px-2 py-4 cursor-pointer hover:shadow-xl hover:bg-card bg-gray-100 shadow-md rounded-lg flex items-center"
-          onClick={(e) => {
-            e.stopPropagation();
-            addSongToContext(index);
-          }}
-        >
-          <div className="w-10 h-10 rounded-full drop-shadow-lg relative overflow-hidden">
-            <img
-              src={data.imageURL}
-              alt=""
-              className="w-full h-full rounded-lg object-cover"
-            />
-          </div>
-
-          <p className="text-base text-headingColor font-semibold mx-8 flex flex-col">
-            {data.name}
-            <span className="text-sm text-gray-400 mx-1">{data.artist}</span>
-          </p>
-          <div className="flex items-center justify-between px-10 absolute right-0">
-            {selectedSongs.includes(data._id) ? (
-              <i
-                className="text-2xl text-red-400 drop-shadow-md hover:text-red-600"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleAddToPlaylist(data._id);
-                }}
-              >
-                <MdPlaylistAddCheck />
-              </i>
-            ) : (
-              <i
-                className="text-2xl text-red-400 drop-shadow-md hover:text-red-600"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleAddToPlaylist(data._id);
-                }}
-              >
-                <MdPlaylistAdd />
-              </i>
-            )}
-          </div>
-        </div>
-      ))}
-    </>
-  );
-};

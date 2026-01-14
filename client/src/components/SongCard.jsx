@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import PropTypes from "prop-types";
 import { motion } from "framer-motion";
 import { IoTrash } from "react-icons/io5";
 import { deleteObject, ref } from "firebase/storage";
@@ -8,7 +9,10 @@ import { useStateValue } from "../context/StateProvider";
 import { actionType } from "../context/reducer";
 import { storage } from "../config/firebase.config";
 
+import { useData } from "../hooks/useData";
+
 export default function SongCard({ data, type, index }) {
+  const { refreshAllData } = useData();
   const [isDelete, setIsDelete] = useState(false);
   const [{ allSongs, songIndex, isSongPlaying }, dispatch] = useStateValue();
 
@@ -21,12 +25,7 @@ export default function SongCard({ data, type, index }) {
 
     deleteSongById(data._id).then((res) => {
       if (res.data) {
-        getAllSongs().then((data) => {
-          dispatch({
-            type: actionType.SET_ALL_SONGS,
-            allSongs: data.song,
-          });
-        });
+        refreshAllData();
       }
     });
   };
@@ -59,7 +58,9 @@ export default function SongCard({ data, type, index }) {
         <motion.img
           whileHover={{ scale: 1.05 }}
           src={data.imageURL}
+          alt={data.name}
           className="w-full h-full rounded-lg object-cover"
+          loading="lazy"
         />
       </div>
 
@@ -114,3 +115,18 @@ export default function SongCard({ data, type, index }) {
     </motion.div>
   );
 }
+
+SongCard.propTypes = {
+  data: PropTypes.shape({
+    _id: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired,
+    imageURL: PropTypes.string.isRequired,
+    songURL: PropTypes.string,
+    album: PropTypes.string,
+    artist: PropTypes.string.isRequired,
+    language: PropTypes.string,
+    category: PropTypes.string,
+  }).isRequired,
+  type: PropTypes.string.isRequired,
+  index: PropTypes.number.isRequired,
+};

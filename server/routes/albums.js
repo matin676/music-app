@@ -1,9 +1,9 @@
 const router = require("express").Router();
 
-const album = require("../models/album");
+const Album = require("../models/album");
 
 router.post("/save", async (req, res) => {
-  const newAlbum = album({
+  const newAlbum = new Album({
     name: req.body.name,
     imageURL: req.body.imageURL,
   });
@@ -19,7 +19,7 @@ router.post("/save", async (req, res) => {
 router.get("/getone/:id", async (req, res) => {
   const filter = { _id: req.params.id };
 
-  const data = await album.findOne(filter);
+  const data = await Album.findOne(filter);
 
   if (data) {
     return res.status(200).send({ success: true, album: data });
@@ -29,7 +29,7 @@ router.get("/getone/:id", async (req, res) => {
 });
 
 router.get("/getall", async (req, res) => {
-  const data = await album.find().sort({ createdAt: 1 });
+  const data = await Album.find().sort({ createdAt: 1 }).lean();
 
   if (data) {
     return res.status(200).send({ success: true, album: data });
@@ -40,10 +40,10 @@ router.get("/getall", async (req, res) => {
 
 router.put("/update/:id", async (req, res) => {
   const filter = { _id: req.params.id };
-  const options = { upsert: true, new: true };
+  const options = { new: true };
 
   try {
-    const result = await album.findOneAndUpdate(
+    const result = await Album.findOneAndUpdate(
       filter,
       {
         name: req.body.name,
@@ -52,7 +52,11 @@ router.put("/update/:id", async (req, res) => {
       options
     );
 
-    return res.status(200).send({ success: true, data: result });
+    if (result) {
+      return res.status(200).send({ success: true, data: result });
+    } else {
+      return res.status(404).send({ success: false, msg: "Album not found" });
+    }
   } catch (error) {
     return res.status(400).send({ success: false, msg: error });
   }
@@ -61,9 +65,9 @@ router.put("/update/:id", async (req, res) => {
 router.delete("/delete/:id", async (req, res) => {
   const filter = { _id: req.params.id };
 
-  const result = await album.deleteOne(filter);
+  const result = await Album.deleteOne(filter);
 
-  if (result) {
+  if (result.deletedCount === 1) {
     return res
       .status(200)
       .send({ success: true, msg: "Data deleted successfully" });

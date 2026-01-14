@@ -16,8 +16,10 @@ export const actionType = {
   SET_SONG_INDEX: "SET_SONG_INDEX",
   SET_ISSONG_PLAYING: "SET_ISSONG_PLAYING",
   SET_MINI_PLAYER: "SET_MINI_PLAYER",
+  SET_CURRENT_PLAYLIST: "SET_CURRENT_PLAYLIST", // New: stores current playing context
   ADD_TO_FAVORITES: "ADD_TO_FAVORITES",
   REMOVE_TO_FAVORITES: "REMOVE_TO_FAVORITES",
+  SET_FAVOURITES: "SET_FAVOURITES",
 };
 
 const reducer = (state, action) => {
@@ -110,6 +112,16 @@ const reducer = (state, action) => {
       return {
         ...state,
         favourites: state.favourites.filter((index) => index !== action.index),
+      };
+    case actionType.SET_FAVOURITES:
+      return {
+        ...state,
+        favourites: action.favourites,
+      };
+    case actionType.SET_CURRENT_PLAYLIST:
+      return {
+        ...state,
+        currentPlaylist: action.currentPlaylist,
       };
     default:
       return state;

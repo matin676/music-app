@@ -1,210 +1,266 @@
-import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { IoHeartOutline, IoHeart } from "react-icons/io5";
+import React, { useEffect, useMemo, useCallback } from "react";
+
+import { motion, AnimatePresence } from "framer-motion";
 
 import Header from "./Header";
 import Filter from "./Filter";
 import SearchBar from "./SearchBar";
-import SongCard from "./SongCard";
+import HeroSection from "./HeroSection";
+import HorizontalSongCarousel from "./HorizontalSongCarousel";
 import { useStateValue } from "../context/StateProvider";
 import { actionType } from "../context/reducer";
-import { getAllSongs } from "../api";
+import { useData } from "../hooks/useData";
+import { updateUserFavourites } from "../api";
+import SEO from "./SEO";
 
 export default function Home() {
+  const { fetchSongs } = useData();
   const [
     {
       searchTerm,
-      isSongPlaying,
-      songIndex,
       allSongs,
       artistFilter,
       filterTerm,
       albumFilter,
       languageFilter,
       favourites,
+      user,
     },
     dispatch,
   ] = useStateValue();
 
-  const [filteredSongs, setFilteredSongs] = useState(null);
+  // Dynamic Featured Song Logic
+  const [featuredIndex, setFeaturedIndex] = React.useState(0);
+  const [isHovered, setIsHovered] = React.useState(false);
 
   useEffect(() => {
-    if (!allSongs) {
-      getAllSongs().then((data) => {
-        dispatch({
-          type: actionType.SET_ALL_SONGS,
-          allSongs: data.song,
-        });
-      });
+    // Clear all filters when component mounts (fixes issue when returning from dashboard)
+    dispatch({ type: actionType.SET_ARTIST_FILTER, artistFilter: null });
+    dispatch({ type: actionType.SET_LANGUAGE_FILTER, languageFilter: null });
+    dispatch({ type: actionType.SET_ALBUM_FILTER, albumFilter: null });
+    dispatch({ type: actionType.SET_FILTER_TERM, filterTerm: null });
+
+    fetchSongs();
+  }, [dispatch, fetchSongs]);
+
+  useEffect(() => {
+    if (allSongs && allSongs.length > 0) {
+      // Set initial random song only if we haven't set one yet or if needed
+      // Actually, we probably just want to keep the interval running.
+      // If we want random start every time logic:
+      // const randomIndex = Math.floor(Math.random() * allSongs.length);
+      // setFeaturedIndex(randomIndex);
+      // (Moving this initialization to a separate effect or memo if strictly needed 1-time,
+      // but here is fine if we accept re-random on allSongs change which is rare)
+
+      // Rotate every 6 minutes (360000ms)
+      const interval = setInterval(() => {
+        if (!isHovered) {
+          setFeaturedIndex((prev) => {
+            let nextIndex = Math.floor(Math.random() * allSongs.length);
+            if (nextIndex === prev && allSongs.length > 1) {
+              nextIndex = (prev + 1) % allSongs.length;
+            }
+            return nextIndex;
+          });
+        }
+      }, 360000);
+
+      return () => clearInterval(interval);
     }
-    setFilteredSongs(null);
-  }, []);
+  }, [allSongs, isHovered]);
 
-  useEffect(() => {
-    if (searchTerm.length > 0) {
-      const filtered = allSongs.filter(
+  // Memoized filtering logic
+  const filteredSongs = useMemo(() => {
+    if (!allSongs) return null;
+
+    if (searchTerm && searchTerm.length > 0) {
+      return allSongs.filter(
         (data) =>
-          data.artist.toLowerCase().includes(searchTerm) ||
-          data.language.toLowerCase().includes(searchTerm) ||
-          data.name.toLowerCase().includes(searchTerm) ||
-          data.artist.includes(artistFilter)
+          data.artist.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          data.language.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          data.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
-      setFilteredSongs(filtered);
-    } else {
-      setFilteredSongs(null);
     }
-  }, [searchTerm, artistFilter, allSongs]);
 
-  useEffect(() => {
-    const filtered = allSongs?.filter((data) => data.artist === artistFilter);
-    if (filtered) {
-      setFilteredSongs(filtered);
-    } else {
-      setFilteredSongs(filtered);
+    if (artistFilter) {
+      return allSongs.filter((data) => data.artist === artistFilter);
     }
-  }, [artistFilter]);
 
-  useEffect(() => {
-    const filtered = allSongs?.filter((data) => data.album === albumFilter);
-    if (filtered) {
-      setFilteredSongs(filtered);
-    } else {
-      setFilteredSongs(null);
+    if (albumFilter) {
+      return allSongs.filter((data) => data.album === albumFilter);
     }
-  }, [albumFilter]);
 
-  useEffect(() => {
-    const filtered = allSongs?.filter(
-      (data) => data.language === languageFilter
-    );
-    if (filtered) {
-      setFilteredSongs(filtered);
-    } else {
-      setFilteredSongs(null);
+    if (languageFilter) {
+      return allSongs.filter((data) => data.language === languageFilter);
     }
-  }, [languageFilter]);
 
-  useEffect(() => {
-    const filtered = allSongs?.filter(
-      (data) => data.category.toLowerCase() === filterTerm
-    );
-    if (filtered) {
-      setFilteredSongs(filtered);
-    } else {
-      setFilteredSongs(null);
-    }
-  }, [filterTerm]);
-
-  const toggleFavorite = (index) => {
-    if (favourites.includes(index)) {
-      dispatch({
-        type: actionType.REMOVE_TO_FAVORITES,
-        index,
-      });
-      const updatedFavorites = favourites.filter(
-        (favIndex) => favIndex !== index
+    if (filterTerm) {
+      return allSongs.filter(
+        (data) => data.category.toLowerCase() === filterTerm
       );
-      localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
-    } else {
-      dispatch({
-        type: actionType.ADD_TO_FAVORITES,
-        index,
-      });
-      const updatedFavorites = [...favourites, index];
-      localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
     }
-  };
+
+    return null;
+  }, [
+    searchTerm,
+    artistFilter,
+    albumFilter,
+    languageFilter,
+    filterTerm,
+    allSongs,
+  ]);
+
+  // Memoized toggle favorite handler
+  const toggleFavorite = useCallback(
+    async (songId) => {
+      if (!user) return;
+
+      const isFavorited = favourites.includes(songId);
+
+      // Optimistic Update
+      dispatch({
+        type: isFavorited
+          ? actionType.REMOVE_TO_FAVORITES
+          : actionType.ADD_TO_FAVORITES,
+        index: songId,
+      });
+
+      // Sync with backend
+      await updateUserFavourites(user?.user?._id, songId);
+
+      // LocalStorage sync
+      const updatedFavorites = isFavorited
+        ? favourites.filter((id) => id !== songId)
+        : [...favourites, songId];
+      localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
+    },
+    [favourites, user, dispatch]
+  );
+
+  // Get songs to display (filtered or all)
+  const displaySongs = filteredSongs || allSongs;
+
+  // Derive featured song
+  const featuredSong = useMemo(
+    () => allSongs?.[featuredIndex],
+    [allSongs, featuredIndex]
+  );
+
+  // Memoized category grouping
+  const categorizedSongs = useMemo(() => {
+    if (!displaySongs) return {};
+
+    const categories = [
+      "rock",
+      "jazz",
+      "pop",
+      "folk",
+      "classical",
+      "electronic",
+      "country",
+      "metal",
+      "soul",
+      "disco",
+      "party",
+    ];
+
+    const result = {};
+    categories.forEach((category) => {
+      result[category] = displaySongs.filter(
+        (song) => song.category.toLowerCase() === category
+      );
+    });
+
+    return result;
+  }, [displaySongs]);
+
+  // Memoized recent songs
+  const recentSongs = useMemo(
+    () => displaySongs?.slice(-10).reverse(),
+    [displaySongs]
+  );
+
+  // Check if any filter is active
+  const hasActiveFilters =
+    searchTerm || artistFilter || albumFilter || languageFilter || filterTerm;
 
   return (
-    <div className="w-full h-auto flex flex-col items-center justify-center bg-primary">
+    <div className="w-full min-h-screen flex flex-col items-center justify-start bg-transparent">
+      <SEO
+        title="Home"
+        description="Explore the latest tunes, discover new artists, and dive into your favorite albums on MusicApp."
+      />
       <Header />
-      <SearchBar />
 
-      {searchTerm.length > 0 && (
-        <p className="my-4 text-base text-textColor">
-          Searched for :{" "}
-          <span className="text-xl text-cartBg font-semibold">
-            {searchTerm}
-          </span>
-        </p>
-      )}
+      <main className="w-full p-4 md:p-6 flex flex-col items-center max-w-[1400px] flex-1">
+        {/* Search Bar */}
+        <SearchBar />
 
-      <Filter setFilteredSongs={setFilteredSongs} />
+        {searchTerm.length > 0 && (
+          <p className="my-4 text-base text-textColor">
+            Searched for :{" "}
+            <span className="text-xl text-headingColor font-bold">
+              {searchTerm}
+            </span>
+          </p>
+        )}
 
-      <div className="w-full h-auto flex items-center justify-evenly gap-4 flex-wrap p-4">
-        <HomeSongContainer
-          musics={filteredSongs ? filteredSongs : allSongs}
-          toggleFavorite={toggleFavorite}
-          favourites={favourites}
-        />
-      </div>
+        {/* Filter Bar */}
+        <Filter />
+
+        {/* Hero Section - Only show if no filters active */}
+        {!hasActiveFilters && featuredSong && (
+          <div
+            className="w-full"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          >
+            <AnimatePresence mode="wait">
+              <HeroSection
+                key={featuredSong._id}
+                featuredSong={featuredSong}
+                favourites={favourites}
+                toggleFavorite={toggleFavorite}
+                songIndex={featuredIndex}
+              />
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* Recently Added Section */}
+        {recentSongs && recentSongs.length > 0 && (
+          <HorizontalSongCarousel
+            title="Recently Added"
+            songs={recentSongs}
+            favourites={favourites}
+            toggleFavorite={toggleFavorite}
+          />
+        )}
+
+        {/* Category Sections */}
+        {Object.entries(categorizedSongs).map(([category, songs]) => {
+          if (!songs || songs.length === 0) return null;
+
+          return (
+            <HorizontalSongCarousel
+              key={category}
+              title={category.charAt(0).toUpperCase() + category.slice(1)}
+              songs={songs}
+              favourites={favourites}
+              toggleFavorite={toggleFavorite}
+            />
+          );
+        })}
+
+        {/* Empty State */}
+        {(!displaySongs || displaySongs.length === 0) && (
+          <div className="w-full py-20 flex flex-col items-center justify-center text-gray-400">
+            <p className="text-xl font-medium">No songs found</p>
+            <p className="text-sm mt-2">Try adjusting your filters</p>
+          </div>
+        )}
+      </main>
     </div>
   );
 }
-
-export const HomeSongContainer = ({ musics, toggleFavorite, favourites }) => {
-  const [{ isSongPlaying, songIndex }, dispatch] = useStateValue();
-
-  const addSongToContext = (index) => {
-    if (!isSongPlaying) {
-      dispatch({
-        type: actionType.SET_ISSONG_PLAYING,
-        isSongPlaying: true,
-      });
-    }
-    if (songIndex !== index) {
-      dispatch({
-        type: actionType.SET_SONG_INDEX,
-        songIndex: index,
-      });
-    }
-  };
-
-  return (
-    <>
-      {musics?.map((data, index) => (
-        <motion.div
-          key={data._id}
-          whileTap={{ scale: 0.8 }}
-          initial={{ opacity: 0, translateX: -50 }}
-          animate={{ opacity: 1, translateX: 0 }}
-          transition={{ duration: 0.3, delay: index * 0.1 }}
-          className="relative w-40 min-w-210 px-2 py-4 cursor-pointer hover:shadow-xl hover:bg-card bg-gray-100 shadow-md rounded-lg flex flex-col items-center"
-          onClick={(e) => {
-            e.stopPropagation();
-            addSongToContext(index);
-          }}
-        >
-          <div className="w-40 min-w-[160px] h-40 min-h-[160px] rounded-lg drop-shadow-lg relative overflow-hidden">
-            <motion.img
-              whileHover={{ scale: 1.05 }}
-              src={data.imageURL}
-              alt=""
-              className=" w-full h-full rounded-lg object-cover"
-            />
-          </div>
-
-          <p className="text-base text-headingColor font-semibold my-2 text-center">
-            {data.name.length > 20 ? `${data.name.slice(0, 20)}...` : data.name}
-            <span className="block text-sm text-gray-400 my-1">
-              {data.artist}
-            </span>
-          </p>
-          <div className="w-full absolute bottom-2 right-2 flex items-center justify-between px-4">
-            <motion.i
-              whileTap={{ scale: 0.75 }}
-              className="text-base text-red-400 drop-shadow-md hover:text-red-600"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {favourites.includes(index) ? (
-                <IoHeart onClick={() => toggleFavorite(index)} />
-              ) : (
-                <IoHeartOutline onClick={() => toggleFavorite(index)} />
-              )}
-            </motion.i>
-          </div>
-        </motion.div>
-      ))}
-    </>
-  );
-};

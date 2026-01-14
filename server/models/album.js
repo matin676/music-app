@@ -14,4 +14,6 @@ const albumSchema = mongoose.Schema(
   { timestamps: true }
 );
 
+albumSchema.index({ name: 1 });
+
 module.exports = mongoose.model("album", albumSchema);

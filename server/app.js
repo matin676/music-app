@@ -39,8 +39,6 @@ mongoose.connection
     console.log(`Error : ${error}`);
   });
 
-const PORT = process.env.PORT;
-
-app.listen(PORT, () => {
-  console.log("Listening to port 4000");
+app.listen(process.env.PORT || 4000, () => {
+  console.log(`Listening to port ${process.env.PORT || 4000}`);
 });

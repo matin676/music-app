@@ -122,4 +122,30 @@ router.put("/updateuser/:userId", async (req, res) => {
   }
 });
 
+router.put("/updateFavourites/:userId", async (req, res) => {
+  const filter = { _id: req.params.userId };
+  const songId = req.body.songId;
+  try {
+    const userExists = await user.findOne(filter);
+    if (!userExists) {
+      return res.status(404).send({ success: false, msg: "User not found" });
+    }
+
+    const favourites = userExists.favourites || [];
+    const isPresent = favourites.includes(songId);
+
+    const updatedUser = await user.findOneAndUpdate(
+      filter,
+      isPresent
+        ? { $pull: { favourites: songId } }
+        : { $addToSet: { favourites: songId } },
+      { new: true }
+    );
+
+    res.status(200).send({ success: true, user: updatedUser });
+  } catch (error) {
+    res.status(400).send({ success: false, msg: error.message });
+  }
+});
+
 module.exports = router;

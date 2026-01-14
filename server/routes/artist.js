@@ -1,9 +1,9 @@
 const router = require("express").Router();
 
-const artist = require("../models/artist");
+const Artist = require("../models/artist");
 
 router.post("/save", async (req, res) => {
-  const newArtist = artist({
+  const newArtist = new Artist({
     name: req.body.name,
     imageURL: req.body.imageURL,
     twitter: req.body.twitter,
@@ -21,7 +21,7 @@ router.post("/save", async (req, res) => {
 router.get("/getone/:id", async (req, res) => {
   const filter = { _id: req.params.id };
 
-  const data = await artist.findOne(filter);
+  const data = await Artist.findOne(filter);
 
   if (data) {
     return res.status(200).send({ success: true, artist: data });
@@ -31,7 +31,7 @@ router.get("/getone/:id", async (req, res) => {
 });
 
 router.get("/getall", async (req, res) => {
-  const data = await artist.find().sort({ createdAt: 1 });
+  const data = await Artist.find().sort({ createdAt: 1 }).lean();
 
   if (data) {
     return res.status(200).send({ success: true, artist: data });
@@ -42,10 +42,10 @@ router.get("/getall", async (req, res) => {
 
 router.put("/update/:id", async (req, res) => {
   const filter = { _id: req.params.id };
-  const options = { upsert: true, new: true };
+  const options = { new: true };
 
   try {
-    const result = await artist.findOneAndUpdate(
+    const result = await Artist.findOneAndUpdate(
       filter,
       {
         name: req.body.name,
@@ -56,7 +56,11 @@ router.put("/update/:id", async (req, res) => {
       options
     );
 
-    return res.status(200).send({ success: true, data: result });
+    if (result) {
+      return res.status(200).send({ success: true, data: result });
+    } else {
+      return res.status(404).send({ success: false, msg: "Artist not found" });
+    }
   } catch (error) {
     return res.status(400).send({ success: false, msg: error });
   }
@@ -65,9 +69,9 @@ router.put("/update/:id", async (req, res) => {
 router.delete("/delete/:id", async (req, res) => {
   const filter = { _id: req.params.id };
 
-  const result = await artist.deleteOne(filter);
+  const result = await Artist.deleteOne(filter);
 
-  if (result) {
+  if (result.deletedCount === 1) {
     return res
       .status(200)
       .send({ success: true, msg: "Data deleted successfully" });

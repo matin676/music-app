@@ -15,4 +15,5 @@ export const initialState = {
   favourites: [],
   playlist: null,
   selectedPlaylist: null,
+  currentPlaylist: null, // Stores the current playing context (null = all songs)
 };

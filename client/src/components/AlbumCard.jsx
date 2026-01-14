@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import PropTypes from "prop-types";
 import { motion } from "framer-motion";
 import { IoTrash } from "react-icons/io5";
 
@@ -7,8 +8,10 @@ import { useStateValue } from "../context/StateProvider";
 import { actionType } from "../context/reducer";
 import { deleteObject, ref } from "firebase/storage";
 import { storage } from "../config/firebase.config";
+import { useData } from "../hooks/useData";
 
 export default function AlbumCard({ data, type, index }) {
+  const { refreshAllData } = useData();
   const [isDelete, setIsDelete] = useState(false);
   const [{ allAlbums }, dispatch] = useStateValue();
 
@@ -18,12 +21,7 @@ export default function AlbumCard({ data, type, index }) {
 
     deleteAlbumById(data._id).then((res) => {
       if (res.data) {
-        getAllAlbums().then((data) => {
-          dispatch({
-            type: actionType.SET_ALL_ALBUMS,
-            allAlbums: data.album,
-          });
-        });
+        refreshAllData();
       }
     });
   };
@@ -34,7 +32,9 @@ export default function AlbumCard({ data, type, index }) {
         <motion.img
           whileHover={{ scale: 1.05 }}
           src={data.imageURL}
+          alt={data.name}
           className="w-full h-full rounded-lg object-cover"
+          loading="lazy"
         />
       </div>
 
@@ -82,3 +82,13 @@ export default function AlbumCard({ data, type, index }) {
     </motion.div>
   );
 }
+
+AlbumCard.propTypes = {
+  data: PropTypes.shape({
+    _id: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired,
+    imageURL: PropTypes.string.isRequired,
+  }).isRequired,
+  type: PropTypes.string.isRequired,
+  index: PropTypes.number.isRequired,
+};

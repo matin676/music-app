@@ -30,6 +30,10 @@ const UserSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    favourites: {
+      type: [String],
+      default: [],
+    },
   },
   { timestamps: true }
 );

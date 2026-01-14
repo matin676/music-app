@@ -1,12 +1,13 @@
 const router = require("express").Router();
 
-const playlist = require("../models/playlist");
+const Playlist = require("../models/playlist");
 
 router.post("/savePlaylist", async (req, res) => {
-  const newPlaylist = playlist({
+  const newPlaylist = new Playlist({
     name: req.body.name,
     imageURL: req.body.imageURL,
     songs: req.body.songs,
+    user: req.body.user,
   });
   try {
     const savedPlaylist = await newPlaylist.save();
@@ -18,9 +19,8 @@ router.post("/savePlaylist", async (req, res) => {
 
 router.get("/getall", async (req, res) => {
   try {
-    const playlists = await playlist.find();
-
-    res.status(200).json(playlists);
+    const playlists = await Playlist.find().lean();
+    res.status(200).send({ success: true, data: playlists });
   } catch (error) {
     console.error("Error fetching playlists:", error);
     res.status(500).json({ error: "Internal Server Error" });
@@ -30,7 +30,7 @@ router.get("/getall", async (req, res) => {
 router.get("/getplaylist/:id", async (req, res) => {
   try {
     const filter = { _id: req.params.id };
-    const data = await playlist.findOne(filter);
+    const data = await Playlist.findOne(filter);
 
     if (data) {
       return res.status(200).send({ success: true, playlist: data });
@@ -48,9 +48,9 @@ router.get("/getplaylist/:id", async (req, res) => {
 router.delete("/deleteplaylist/:id", async (req, res) => {
   const filter = { _id: req.params.id };
 
-  const result = await playlist.deleteOne(filter);
+  const result = await Playlist.deleteOne(filter);
 
-  if (result) {
+  if (result.deletedCount === 1) {
     return res
       .status(200)
       .send({ success: true, msg: "Data deleted successfully" });

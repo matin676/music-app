@@ -18,8 +18,6 @@ try {
       universe_domain: process.env.FIREBASE_UNIVERSE_DOMAIN,
     }),
   });
-
-  console.log("Firebase initialized successfully");
 } catch (error) {
   console.error("Error initializing Firebase:", error);
 }

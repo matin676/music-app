@@ -1,68 +1,106 @@
-# Music-app
+# MusicApp 🎵
 
-Welcome to MusicApp, a web application built with the MERN stack, Firebase authentication, and Google Cloud Bucket storage.
+[GitHub Repo](https://github.com/matin676/music-app)
 
-## Overview
+A modern, full-stack music streaming platform designed for a premium user experience. Built with the MERN stack (MongoDB, Express, React, Node.js) and Firebase.
 
-MusicApp allows users to stream music, manage playlists, upload songs, and enjoy a personalized listening experience. It integrates Firebase for user authentication and Google Cloud Bucket for storage, ensuring a seamless and secure music streaming platform.
+## ✨ Features
 
-## Features
+### 👤 User Features
 
-- User Authentication with Firebase
-- Playlist Management
-- Song Uploading and Storage on Google Cloud Bucket
-- Seamless Music Playback
+- **Authentication**: Secure Google Sign-in via Firebase.
+- **Dynamic Discovery**:
+  - **Featured Track**: Automatically rotates every 6 minutes to showcase random songs from the library. Pauses on hover for a natural user experience.
+  - **Filtering**: Robust filtering by **Artist**, **Album**, **Language**, and **Category**.
+  - **Search**: Real-time search for songs, artists, and albums.
+- **Music Player**:
+  - Full playback control (Play, Pause, Next, Prev, Seek).
+  - Gapless playback across the application.
+- **Library Management**:
+  - "Like" songs to add them to your **Favorites**.
+  - Create and manage custom **Playlists**.
+- **Responsive Design**: Mobile-first approach. The interface adapts perfectly to all screen sizes (Desktop, Tablet, Mobile).
 
-## Admin Only Features
+### 🛡️ Admin Features
 
-- Only admin have access to the dashboard from home page, other users don't have Dashboard option in the dropdown
-  
-  ![Screenshot (1)](https://github.com/user-attachments/assets/55a02bf4-3f39-4026-8ac1-b9f8c0578305)
+- **Dashboard Access**: Exclusive access to the administrative dashboard (`/dashboard/*`).
+- **Content Management**:
+  - **Upload Songs**: Add new tracks with audio files and album art (stored in Firebase Storage).
+  - **Manage Metadata**: Create and edit Artists and Albums.
+  - **Delete Content**: Remove songs, artists, or albums directly from the database and storage.
+- **User Management**: View all registered users and manage their roles (promote to Admin / demote to Member).
 
-- Below are the dashboard features in screenshots
-  
-  ![Screenshot (2)](https://github.com/user-attachments/assets/b1ea8fc2-2c77-4fc6-867f-8b1458dddc5d)
-  
-- Managing users and their permission
-  
-  ![Screenshot (3)](https://github.com/user-attachments/assets/20913326-7822-4e73-9aba-89ad5c5c9a9f)
+## 👥 Roles Strategy
 
-- From Songs, Artists, Albums admin can manage all the sites uploaded assets
-  
-  ![Screenshot (4)](https://github.com/user-attachments/assets/3596abb0-168a-43af-9571-f834d1df0a4c)
+The application enforces role-based access control (RBAC):
 
-- From Songs page there is another page from where admin can add songs, artist and album information
-  
-  ![Screenshot (5)](https://github.com/user-attachments/assets/9b0d2345-a2b6-4faa-9935-95b9ae3941fc)
+1. **Member**: The default role for all new users.
 
-## Technologies Used
+   - _Capabilities_: Listen to music, search, filter, manage favorites/playlists.
+   - _Restrictions_: Cannot access the Dashboard or modify global content.
 
-- MongoDB: Database for storing user data, playlists, and songs.
-- Express.js: Backend framework for routing and API development.
-- React: Frontend library for building the user interface.
-- Node.js: Server-side JavaScript runtime for backend logic.
-- Firebase Authentication: Secure authentication service for users.
-- Google Cloud Bucket: Storage solution for admin(for now only admin can upload songs)-uploaded songs.
-- HTML/CSS: Markup and styling for the frontend.
-- JavaScript (ES6+): Programming language for frontend and backend logic.
+2. **Admin**: High-level privilege role.
+   - _Capabilities_: All Member capabilities + Full Dashboard access.
+   - _Responsibilities_: Content moderation, uploading new music, managing user roles.
 
-## Installation
+## 🛠️ Tech Stack
 
-1. Clone the repository: `git clone https://github.com/matin676/music-app`
-2. Navigate to the project directory: `cd music-app`
-3. Install dependencies: `npm install`
-4. Set up Firebase and Google Cloud Bucket credentials (refer to respective documentation).
-5. Start the development server: `npm start`
-- Once you setup the project, you can change the admin functionality for yourself by changing the details of MongoDB details
+### Frontend (Client)
 
-## Deployment
+- **React 19** + **Vite**: Ultra-fast development and performant builds.
+- **Tailwind CSS (v4)**: Advanced styling with a mobile-first approach.
+- **Framer Motion**: Smooth, natural animations (e.g., Hero section transitions).
+- **Firebase SDK**: Auth and Storage interactions.
+- **Axios**: Efficient HTTP requests.
 
-Deploy the application to your preferred hosting platform. Ensure Firebase and Google Cloud Bucket configurations are correctly set for production deployment.
+### Backend (Server)
 
-## Contributing
+- **Node.js** + **Express**: Robust REST API.
+- **MongoDB** + **Mongoose**: Flexible data modeling for Songs, Artists, Albums, and Users.
+- **Firebase Admin SDK**: Secure server-side token verification.
 
-Contributions are welcome! Fork the repository, create a new branch for your feature or bug fix, make your changes, and submit a pull request.
+## 🚀 Getting Started
 
-## License
+### Prerequisites
 
-This project is licensed under the [Apache 2.0 license](LICENSE).
+- Node.js (v18+ recommended)
+- MongoDB URI
+- Firebase Project (Auth & Storage enabled)
+
+### Local Setup
+
+1. **Clone the repo**
+
+   ```bash
+   git clone https://github.com/matin676/music-app.git
+   cd music-app
+   ```
+
+2. **Server Setup**
+
+   ```bash
+   cd server
+   npm install
+   # Create .env with PORT, DB_STRING, and Firebase service account credentials
+   npm run dev
+   ```
+
+3. **Client Setup**
+
+   ```bash
+   cd client
+   npm install
+   # Create .env with VITE_FIREBASE_* keys and VITE_API_BASE_URL
+   npm run dev
+   ```
+
+## ☁️ Deployment
+
+- **Client**: Deployed on [Netlify](https://www.netlify.com/).
+- **Server**: Deployed on [Render](https://render.com/).
+
+_Refer to `deployment_guide.md` in the project root for detailed deployment steps._
+
+## 📄 License
+
+This project is licensed under the ISC License.
