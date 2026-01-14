@@ -1,7 +1,5 @@
 # MusicApp 🎵
 
-[GitHub Repo](https://github.com/matin676/music-app)
-
 A modern, full-stack music streaming platform designed for a premium user experience. Built with the MERN stack (MongoDB, Express, React, Node.js) and Firebase.
 
 ## ✨ Features
