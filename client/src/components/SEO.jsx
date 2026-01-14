@@ -1,5 +1,5 @@
 import React from "react";
-import { Helmet } from "react-helmet-async";
+import { Helmet } from "@dr.pogodin/react-helmet";
 import PropTypes from "prop-types";
 
 const SEO = ({ title, description, keywords, image }) => {

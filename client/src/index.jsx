@@ -8,7 +8,7 @@ import reducer from "./context/reducer";
 import App from "./App";
 import "./index.css";
 
-import { HelmetProvider } from "react-helmet-async";
+import { HelmetProvider } from "@dr.pogodin/react-helmet";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
