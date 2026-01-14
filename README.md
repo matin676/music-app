@@ -97,8 +97,6 @@ The application enforces role-based access control (RBAC):
 - **Client**: Deployed on [Netlify](https://www.netlify.com/).
 - **Server**: Deployed on [Render](https://render.com/).
 
-_Refer to `deployment_guide.md` in the project root for detailed deployment steps._
-
 ## 📄 License
 
-This project is licensed under the ISC License.
+This project is licensed under the MIT License.
