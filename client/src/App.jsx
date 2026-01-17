@@ -9,16 +9,18 @@ import { actionType } from "./context/reducer";
 import "./App.css";
 
 // Lazy Loaded Components
-const Home = lazy(() => import("./components/Home"));
-const Login = lazy(() => import("./components/Login"));
-const Dashboard = lazy(() => import("./components/Dashboard"));
-const UserProfile = lazy(() => import("./components/UserProfile"));
-const EditProfile = lazy(() => import("./components/EditProfile"));
-const Favourite = lazy(() => import("./components/Favourite"));
-const Library = lazy(() => import("./components/Library"));
-const AddNewPlaylist = lazy(() => import("./components/AddNewPlaylist"));
-const PlaylistSongs = lazy(() => import("./components/PlaylistSongs"));
-const MusicPlayer = lazy(() => import("./components/MusicPlayer"));
+const Home = lazy(() => import("./components/Home/Home"));
+const Login = lazy(() => import("./components/Auth/Login"));
+const Dashboard = lazy(() => import("./components/Dashboard/Dashboard"));
+const UserProfile = lazy(() => import("./components/Profile/UserProfile"));
+const EditProfile = lazy(() => import("./components/Profile/EditProfile"));
+const Favourite = lazy(() => import("./components/Profile/Favourite"));
+const Library = lazy(() => import("./components/Library/Library"));
+const AddNewPlaylist = lazy(() =>
+  import("./components/Library/AddNewPlaylist")
+);
+const PlaylistSongs = lazy(() => import("./components/Library/PlaylistSongs"));
+const MusicPlayer = lazy(() => import("./components/Player/MusicPlayer"));
 
 import { useAuth } from "./hooks/useAuth";
 import { useData } from "./hooks/useData";
@@ -30,9 +32,7 @@ function App() {
     useStateValue();
 
   useEffect(() => {
-    if (user) {
-      fetchSongs();
-    }
+    fetchSongs();
 
     // Global favourites sync from user object
     if (user?.user?.favourites) {

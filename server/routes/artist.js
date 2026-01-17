@@ -45,10 +45,20 @@ router.put("/update/:id", async (req, res) => {
   const options = { new: true };
 
   try {
+    // 1. Find the existing artist to get the OLD name
+    const oldArtist = await Artist.findOne(filter);
+    if (!oldArtist) {
+      return res.status(404).send({ success: false, msg: "Artist not found" });
+    }
+
+    const oldName = oldArtist.name;
+    const newName = req.body.name;
+
+    // 2. Update the Artist document
     const result = await Artist.findOneAndUpdate(
       filter,
       {
-        name: req.body.name,
+        name: newName,
         imageURL: req.body.imageURL,
         twitter: req.body.twitter,
         instagram: req.body.instagram,
@@ -56,11 +66,13 @@ router.put("/update/:id", async (req, res) => {
       options
     );
 
-    if (result) {
-      return res.status(200).send({ success: true, data: result });
-    } else {
-      return res.status(404).send({ success: false, msg: "Artist not found" });
+    // 3. If name changed, update ALL songs that reference the old artist name
+    if (result && oldName !== newName) {
+      const Song = require("../models/song");
+      await Song.updateMany({ artist: oldName }, { $set: { artist: newName } });
     }
+
+    return res.status(200).send({ success: true, data: result });
   } catch (error) {
     return res.status(400).send({ success: false, msg: error });
   }

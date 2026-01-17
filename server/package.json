@@ -9,7 +9,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Matin Imam",
-  "license": "ISC",
+  "license": "MIT",
   "overrides": {
     "teeny-request": "^10.0.0",
     "tr46": "^6.0.0"

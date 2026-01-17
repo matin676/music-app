@@ -18,7 +18,7 @@ const songSchema = mongoose.Schema(
       type: String,
     },
     artist: {
-      type: String,
+      type: [String],
       required: true,
     },
     language: {
@@ -26,7 +26,7 @@ const songSchema = mongoose.Schema(
       required: true,
     },
     category: {
-      type: String,
+      type: [String],
       required: true,
     },
   },

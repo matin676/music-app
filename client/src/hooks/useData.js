@@ -13,53 +13,65 @@ export const useData = () => {
   const [{ allSongs, allArtists, allAlbums, allUsers, playlist }, dispatch] =
     useStateValue();
 
-  const fetchSongs = useCallback(async () => {
-    if (!allSongs) {
-      const data = await getAllSongs();
-      if (data) {
-        dispatch({
-          type: actionType.SET_ALL_SONGS,
-          allSongs: data.song,
-        });
+  const fetchSongs = useCallback(
+    async (force = false) => {
+      if (!allSongs || force) {
+        const data = await getAllSongs();
+        if (data) {
+          dispatch({
+            type: actionType.SET_ALL_SONGS,
+            allSongs: data.song,
+          });
+        }
       }
-    }
-  }, [allSongs, dispatch]);
+    },
+    [allSongs, dispatch]
+  );
 
-  const fetchArtists = useCallback(async () => {
-    if (!allArtists) {
-      const data = await getAllArtists();
-      if (data) {
-        dispatch({
-          type: actionType.SET_ALL_ARTISTS,
-          allArtists: data.artist,
-        });
+  const fetchArtists = useCallback(
+    async (force = false) => {
+      if (!allArtists || force) {
+        const data = await getAllArtists();
+        if (data) {
+          dispatch({
+            type: actionType.SET_ALL_ARTISTS,
+            allArtists: data.artist,
+          });
+        }
       }
-    }
-  }, [allArtists, dispatch]);
+    },
+    [allArtists, dispatch]
+  );
 
-  const fetchAlbums = useCallback(async () => {
-    if (!allAlbums) {
-      const data = await getAllAlbums();
-      if (data) {
-        dispatch({
-          type: actionType.SET_ALL_ALBUMS,
-          allAlbums: data.album,
-        });
+  const fetchAlbums = useCallback(
+    async (force = false) => {
+      if (!allAlbums || force) {
+        const data = await getAllAlbums();
+        if (data) {
+          dispatch({
+            type: actionType.SET_ALL_ALBUMS,
+            allAlbums: data.album,
+          });
+        }
       }
-    }
-  }, [allAlbums, dispatch]);
+    },
+    [allAlbums, dispatch]
+  );
 
-  const fetchUsers = useCallback(async () => {
-    if (!allUsers) {
-      const data = await getAllUsers();
-      if (data) {
-        dispatch({
-          type: actionType.SET_ALL_USERS,
-          allUsers: data.user,
-        });
+  const fetchUsers = useCallback(
+    async (force = false) => {
+      if (!allUsers || force) {
+        const data = await getAllUsers();
+        if (data) {
+          dispatch({
+            type: actionType.SET_ALL_USERS,
+            allUsers: data.user,
+          });
+        }
       }
-    }
-  }, [allUsers, dispatch]);
+    },
+    [allUsers, dispatch]
+  );
 
   const fetchPlaylists = useCallback(async () => {
     if (!playlist) {

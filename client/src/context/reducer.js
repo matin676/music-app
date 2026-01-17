@@ -20,6 +20,8 @@ export const actionType = {
   ADD_TO_FAVORITES: "ADD_TO_FAVORITES",
   REMOVE_TO_FAVORITES: "REMOVE_TO_FAVORITES",
   SET_FAVOURITES: "SET_FAVOURITES",
+  SET_REPEAT_MODE: "SET_REPEAT_MODE",
+  SET_IS_SHUFFLE: "SET_IS_SHUFFLE",
 };
 
 const reducer = (state, action) => {
@@ -122,6 +124,16 @@ const reducer = (state, action) => {
       return {
         ...state,
         currentPlaylist: action.currentPlaylist,
+      };
+    case actionType.SET_REPEAT_MODE:
+      return {
+        ...state,
+        repeatMode: action.repeatMode,
+      };
+    case actionType.SET_IS_SHUFFLE:
+      return {
+        ...state,
+        isShuffle: action.isShuffle,
       };
     default:
       return state;

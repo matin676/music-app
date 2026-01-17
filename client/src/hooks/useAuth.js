@@ -42,10 +42,11 @@ export const useAuth = () => {
         });
         setIsLoading(false);
         window.localStorage.setItem("auth", "false");
-        // Only redirect to login if we are not already there
-        if (window.location.pathname !== "/login") {
-          navigate("/login");
-        }
+        window.localStorage.setItem("auth", "false");
+        // Do not redirect to login automatically. Allow guest access.
+        // if (window.location.pathname !== "/login") {
+        //   navigate("/login");
+        // }
       }
     });
 

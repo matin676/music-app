@@ -96,6 +96,33 @@ export const saveNewAlbum = async (data) => {
   }
 };
 
+export const updateSong = async (id, data) => {
+  try {
+    const res = await apiClient.put(`api/songs/update/${id}`, { ...data });
+    return res.data;
+  } catch (error) {
+    return null;
+  }
+};
+
+export const updateArtist = async (id, data) => {
+  try {
+    const res = await apiClient.put(`api/artists/update/${id}`, { ...data });
+    return res.data;
+  } catch (error) {
+    return null;
+  }
+};
+
+export const updateAlbum = async (id, data) => {
+  try {
+    const res = await apiClient.put(`api/albums/update/${id}`, { ...data });
+    return res.data;
+  } catch (error) {
+    return null;
+  }
+};
+
 export const deleteSongById = async (id) => {
   try {
     const res = await apiClient.delete(`api/songs/delete/${id}`);
@@ -186,6 +213,40 @@ export const updateUserFavourites = async (userId, songId) => {
     const res = await apiClient.put(`api/users/updateFavourites/${userId}`, {
       songId,
     });
+    return res.data;
+  } catch (error) {
+    return null;
+  }
+};
+
+export const updatePlaylist = async (id, data) => {
+  try {
+    const res = await apiClient.put(`api/playlists/update/${id}`, { ...data });
+    return res.data;
+  } catch (error) {
+    return null;
+  }
+};
+
+export const addSongToPlaylist = async (playlistId, songId) => {
+  try {
+    const res = await apiClient.put(`api/playlists/update/${playlistId}/add`, {
+      songId,
+    });
+    return res.data;
+  } catch (error) {
+    return null;
+  }
+};
+
+export const removeSongFromPlaylist = async (playlistId, songId) => {
+  try {
+    const res = await apiClient.put(
+      `api/playlists/update/${playlistId}/remove`,
+      {
+        songId,
+      }
+    );
     return res.data;
   } catch (error) {
     return null;

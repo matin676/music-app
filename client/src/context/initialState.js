@@ -5,7 +5,7 @@ export const initialState = {
   allSongs: null,
   allArtists: null,
   allAlbums: null,
-  filterTerm: "all",
+  filterTerm: null,
   artistFilter: null,
   languageFilter: null,
   albumFilter: null,
@@ -16,4 +16,6 @@ export const initialState = {
   playlist: null,
   selectedPlaylist: null,
   currentPlaylist: null, // Stores the current playing context (null = all songs)
+  repeatMode: "off", // 'off' | 'one' | 'all'
+  isShuffle: false,
 };

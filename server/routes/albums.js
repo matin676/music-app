@@ -43,20 +43,32 @@ router.put("/update/:id", async (req, res) => {
   const options = { new: true };
 
   try {
+    // 1. Find the existing album to get its OLD name
+    const oldAlbum = await Album.findOne(filter);
+    if (!oldAlbum) {
+      return res.status(404).send({ success: false, msg: "Album not found" });
+    }
+
+    const oldName = oldAlbum.name;
+    const newName = req.body.name;
+
+    // 2. Update the Album document
     const result = await Album.findOneAndUpdate(
       filter,
       {
-        name: req.body.name,
+        name: newName,
         imageURL: req.body.imageURL,
       },
       options
     );
 
-    if (result) {
-      return res.status(200).send({ success: true, data: result });
-    } else {
-      return res.status(404).send({ success: false, msg: "Album not found" });
+    // 3. If the name has changed, update ALL songs that reference the old name
+    if (result && oldName !== newName) {
+      const Song = require("../models/song");
+      await Song.updateMany({ album: oldName }, { $set: { album: newName } });
     }
+
+    return res.status(200).send({ success: true, data: result });
   } catch (error) {
     return res.status(400).send({ success: false, msg: error });
   }

@@ -11,8 +11,8 @@ const playlistSchema = mongoose.Schema(
       required: true,
     },
     songs: {
-      type: [String],
-      required: true,
+      type: Array,
+      default: [],
     },
     user: {
       type: String,
