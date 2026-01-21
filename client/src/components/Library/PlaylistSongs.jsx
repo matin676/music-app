@@ -32,7 +32,8 @@ export default function PlaylistSongs() {
 
   const removeSong = (songId) => {
     removeSongFromPlaylist(id, songId).then((res) => {
-      if (res.success) {
+      // New API returns { success, message, data }
+      if (res?.success || res?.data) {
         setAlert("success");
         setAlertMsg("Song removed from playlist");
         // Optimistically update
@@ -80,14 +81,16 @@ export default function PlaylistSongs() {
     const fetchData = async () => {
       try {
         const data = await getPlaylistById(id);
-        if (data && data.success) {
+        // New API returns { success, message, data }
+        const playlistData = data?.data || data?.playlist || data;
+        if (playlistData) {
           dispatch({
             type: actionType.SET_SELECTED_PLAYLIST,
-            selectedPlaylist: data.playlist,
+            selectedPlaylist: playlistData,
           });
         }
       } catch (error) {
-        console.error("Error fetching playlist:", error);
+        // Error handled silently - playlist not found or network error
       }
     };
 

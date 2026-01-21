@@ -13,7 +13,7 @@ export const useAuth = () => {
   const [{ user }, dispatch] = useStateValue();
   const [isLoading, setIsLoading] = useState(false);
   const [auth, setAuth] = useState(
-    false || window.localStorage.getItem("auth") === "true"
+    false || window.localStorage.getItem("auth") === "true",
   );
 
   useEffect(() => {
@@ -23,9 +23,11 @@ export const useAuth = () => {
         userCred.getIdToken().then((token) => {
           window.localStorage.setItem("auth", "true");
           validateUser(token).then((data) => {
+            // New API returns { success, message, data: { user } }
+            const userData = data?.data || data;
             dispatch({
               type: actionType.SET_USER,
-              user: data,
+              user: userData,
             });
             setIsLoading(false);
             // Only redirect to home if we are currently on the login page

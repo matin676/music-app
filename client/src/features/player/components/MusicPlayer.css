@@ -1,0 +1,256 @@
+/**
+ * Music Player Styles
+ */
+
+.music-player {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--player-height);
+  background: linear-gradient(
+    to top,
+    var(--color-bg-primary) 0%,
+    rgba(10, 10, 15, 0.95) 100%
+  );
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-6);
+  z-index: var(--z-player);
+  gap: var(--space-4);
+}
+
+.music-player-mini {
+  height: var(--player-height-mini);
+}
+
+/* Song Info */
+.player-song-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 200px;
+  max-width: 300px;
+}
+
+.player-album-art {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  box-shadow: var(--shadow-lg);
+}
+
+.music-player-mini .player-album-art {
+  width: 44px;
+  height: 44px;
+}
+
+.player-text {
+  overflow: hidden;
+}
+
+.player-song-name {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-artist-name {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Main Controls */
+.player-main-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  max-width: 600px;
+}
+
+.player-buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.player-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.player-btn:hover {
+  color: var(--color-text-primary);
+  background: var(--color-bg-glass);
+}
+
+.player-btn.active {
+  color: var(--color-accent-primary);
+}
+
+.player-btn-sm {
+  width: 32px;
+  height: 32px;
+  font-size: 1rem;
+}
+
+.player-btn-play {
+  width: 48px;
+  height: 48px;
+  background: var(--color-text-primary);
+  color: var(--color-bg-primary);
+  font-size: 1.5rem;
+}
+
+.player-btn-play:hover {
+  background: var(--color-text-primary);
+  transform: scale(1.05);
+}
+
+/* Progress Bar */
+.player-progress-container {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.player-time {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  min-width: 40px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.player-progress {
+  flex: 1;
+  height: 4px;
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  position: relative;
+  overflow: visible;
+}
+
+.player-progress:hover {
+  height: 6px;
+}
+
+.player-progress-filled {
+  height: 100%;
+  background: var(--color-accent-primary);
+  border-radius: var(--radius-full);
+  position: relative;
+  transition: width 0.1s linear;
+}
+
+.player-progress-thumb {
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  background: var(--color-text-primary);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.player-progress:hover .player-progress-thumb {
+  opacity: 1;
+}
+
+/* Right Controls */
+.player-right-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 200px;
+  justify-content: flex-end;
+}
+
+.player-volume {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.player-volume-slider {
+  width: 100px;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+}
+
+.player-volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  background: var(--color-text-primary);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .music-player {
+    padding: 0 var(--space-4);
+  }
+
+  .player-song-info {
+    min-width: auto;
+    max-width: 40%;
+  }
+
+  .player-album-art {
+    width: 48px;
+    height: 48px;
+  }
+
+  .player-right-controls {
+    display: none;
+  }
+
+  .player-main-controls {
+    flex: none;
+    width: auto;
+  }
+
+  .player-progress-container {
+    display: none;
+  }
+
+  .player-btn-sm {
+    display: none;
+  }
+}

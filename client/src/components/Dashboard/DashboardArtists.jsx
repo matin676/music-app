@@ -1,32 +1,38 @@
-import React, { useEffect, useState } from "react";
+/**
+ * DashboardArtists Component
+ *
+ * Admin dashboard for managing artists.
+ * Uses React Query for data fetching with automatic cache invalidation.
+ */
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { IoLogoInstagram, IoTrash, IoPencil } from "react-icons/io5";
 import { FaXTwitter } from "react-icons/fa6";
 import { deleteObject, ref } from "firebase/storage";
+import toast from "react-hot-toast";
 
-import { useStateValue } from "../../context/StateProvider";
-import { deleteArtistById } from "../../api";
-import { actionType } from "../../context/reducer";
 import { storage } from "../../config/firebase.config";
-import ArtistCard from "../Cards/ArtistCard";
-import { useData } from "../../hooks/useData";
+import { useArtists, useDeleteArtist } from "../../features/library/hooks";
 import EditArtist from "./EditArtist";
+import { Skeleton } from "../../shared/components";
 
 // Artist List Row Component
-export const ArtistListRow = ({ data, index, setArtistToEdit }) => {
-  const { refreshAllData } = useData();
+export const ArtistListRow = ({ data, index, setArtistToEdit, onDelete }) => {
   const [isDelete, setIsDelete] = useState(false);
-  const [{ allArtists }, dispatch] = useStateValue();
 
-  const deleteData = (data) => {
-    const deleteRef = ref(storage, data.imageURL);
-    deleteObject(deleteRef).then(() => {});
+  const handleDelete = async () => {
+    try {
+      // Delete image from Firebase Storage
+      const deleteRef = ref(storage, data.imageURL);
+      await deleteObject(deleteRef).catch(() => {});
 
-    deleteArtistById(data._id).then((res) => {
-      if (res.data) {
-        refreshAllData();
-      }
-    });
+      // Delete from database using mutation
+      await onDelete(data._id);
+      setIsDelete(false);
+      toast.success(`"${data.name}" deleted successfully`);
+    } catch (error) {
+      toast.error("Failed to delete artist");
+    }
   };
 
   return (
@@ -111,7 +117,7 @@ export const ArtistListRow = ({ data, index, setArtistToEdit }) => {
             <div className="flex gap-2">
               <button
                 className="flex-1 py-1 px-2 text-xs font-bold bg-red-500 text-white rounded hover:bg-red-600"
-                onClick={() => deleteData(data)}
+                onClick={handleDelete}
               >
                 Delete
               </button>
@@ -130,13 +136,11 @@ export const ArtistListRow = ({ data, index, setArtistToEdit }) => {
 };
 
 export default function DashboardArtists() {
-  const { fetchArtists } = useData();
   const [artistToEdit, setArtistToEdit] = useState(null);
-  const [{ allArtists }, dispatch] = useStateValue();
 
-  useEffect(() => {
-    fetchArtists();
-  }, [fetchArtists]);
+  // React Query hooks
+  const { data: artists, isLoading, refetch } = useArtists();
+  const deleteArtistMutation = useDeleteArtist();
 
   return (
     <div className="w-full flex flex-col gap-6 p-4">
@@ -147,7 +151,7 @@ export default function DashboardArtists() {
           <p className="text-xs text-gray-500">Manage your artist database</p>
         </div>
         <span className="px-4 py-1 bg-white text-headingColor font-bold rounded-lg shadow-sm border border-gray-100">
-          Total: {allArtists?.length || 0}
+          Total: {artists?.length || 0}
         </span>
       </div>
 
@@ -160,18 +164,40 @@ export default function DashboardArtists() {
           <span>Socials</span>
           <span className="text-right">Action</span>
         </div>
+
         <div className="flex flex-col gap-2">
-          {allArtists &&
-            allArtists.map((artist, i) => (
+          {/* Loading Skeletons */}
+          {isLoading &&
+            [...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className="w-full grid grid-cols-[auto_1fr_auto_auto] gap-4 p-3 bg-white/30 rounded-lg"
+              >
+                <Skeleton className="w-12 h-12 rounded-lg" />
+                <div className="flex flex-col gap-2">
+                  <Skeleton className="w-32 h-4" variant="text" />
+                  <Skeleton className="w-16 h-3" variant="text" />
+                </div>
+                <Skeleton className="w-12 h-6" variant="rect" />
+                <Skeleton className="w-16 h-8" variant="rect" />
+              </div>
+            ))}
+
+          {/* Artists List */}
+          {!isLoading &&
+            artists?.map((artist, i) => (
               <ArtistListRow
                 key={artist._id}
                 data={artist}
                 index={i}
                 setArtistToEdit={setArtistToEdit}
+                onDelete={(id) => deleteArtistMutation.mutateAsync(id)}
               />
             ))}
         </div>
-        {(!allArtists || allArtists.length === 0) && (
+
+        {/* Empty State */}
+        {!isLoading && (!artists || artists.length === 0) && (
           <div className="w-full py-20 flex justify-center text-gray-400">
             No artists found
           </div>
@@ -182,7 +208,7 @@ export default function DashboardArtists() {
         <EditArtist
           data={artistToEdit}
           close={() => setArtistToEdit(null)}
-          refreshData={() => fetchArtists(true)}
+          refreshData={() => refetch()}
         />
       )}
     </div>

@@ -1,81 +1,50 @@
-import React, { useEffect, useState } from "react";
+/**
+ * Library Page Component
+ *
+ * User's personal library showing their playlists.
+ * Uses React Query for data fetching with automatic caching.
+ */
+import React, { useState } from "react";
 import { NavLink } from "react-router-dom";
-
 import { MdDelete } from "react-icons/md";
 import { deleteObject, ref } from "firebase/storage";
+import toast from "react-hot-toast";
 
 import Header from "../Shared/Header";
 import { useStateValue } from "../../context/StateProvider";
-import { actionType } from "../../context/reducer";
-import { deletePlaylistById, getAllPlaylist } from "../../api";
 import { storage } from "../../config/firebase.config";
-import AlertSuccess from "../Shared/AlertSuccess";
-import AlertError from "../Shared/AlertError";
 import SEO from "../Shared/SEO";
 import EditPlaylist from "./EditPlaylist";
 import { IoAdd, IoPencil } from "react-icons/io5";
+import { Skeleton } from "../../shared/components";
+import { usePlaylists, useDeletePlaylist } from "../../features/library/hooks";
 
 export default function Library() {
-  const [{ playlist, user }, dispatch] = useStateValue();
-
+  const [{ user }] = useStateValue();
   const [isDelete, setIsDelete] = useState(false);
-  const [alert, setAlert] = useState(false);
-  const [alertMsg, setAlertMsg] = useState(null);
   const [playlistToEdit, setPlaylistToEdit] = useState(null);
 
-  const alertConfig = (status, msg) => {
-    setAlert(status);
-    setAlertMsg(msg);
-    setTimeout(() => {
-      setAlert(null);
-      setAlertMsg(null);
-    }, 4000);
-  };
+  // React Query hooks
+  const {
+    data: playlists,
+    isLoading,
+    refetch,
+  } = usePlaylists({ enabled: !!user });
+  const deletePlaylistMutation = useDeletePlaylist();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const data = await getAllPlaylist();
-        dispatch({ type: actionType.SET_ALL_PLAYLISTS, playlist: data.data });
-      } catch (error) {
-        console.error("Error fetching playlists:", error);
-      }
-    };
+  const handleDeletePlaylist = async (data) => {
+    try {
+      // Delete image from Firebase Storage
+      const deleteRef = ref(storage, data.imageURL);
+      await deleteObject(deleteRef).catch(() => {});
 
-    if (!playlist) {
-      fetchData();
+      // Delete from database using mutation
+      await deletePlaylistMutation.mutateAsync(data._id);
+      setIsDelete(false);
+      toast.success("Playlist removed successfully");
+    } catch (error) {
+      toast.error("Error removing playlist");
     }
-  }, [playlist, dispatch]);
-
-  const deletePlaylistData = (data) => {
-    const deleteRef = ref(storage, data.imageURL);
-    deleteObject(deleteRef).then(() => {});
-
-    deletePlaylistById(data._id)
-      .then((res) => {
-        if (res && res.data && res.data.success) {
-          getAllPlaylist().then((data) => {
-            dispatch({
-              type: actionType.SET_ALL_PLAYLISTS,
-              playlist: data.data,
-            });
-          });
-          setAlert("success");
-          setAlertMsg("Playlist removed successfully");
-          setTimeout(() => {
-            setAlert(null);
-          }, 4000);
-        } else {
-          setAlert("error");
-          setAlertMsg("Error removing playlist");
-          setTimeout(() => {
-            setAlert(null);
-          }, 4000);
-        }
-      })
-      .catch((error) => {
-        console.error("Error deleting playlist:", error.message);
-      });
   };
 
   return (
@@ -138,19 +107,28 @@ export default function Library() {
                 </p>
               </NavLink>
 
-              {playlist &&
-                playlist.map((data) => (
+              {/* Loading Skeletons */}
+              {isLoading &&
+                [...Array(4)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="w-full aspect-4/5 bg-white/20 backdrop-blur-md border border-white/20 rounded-xl md:rounded-2xl overflow-hidden"
+                  >
+                    <Skeleton className="w-full aspect-square" />
+                    <div className="p-3">
+                      <Skeleton variant="text" className="w-3/4 h-4" />
+                    </div>
+                  </div>
+                ))}
+
+              {/* Playlists */}
+              {!isLoading &&
+                playlists?.map((data) => (
                   <div
                     key={data._id}
                     className="relative w-full aspect-4/5 bg-white/20 backdrop-blur-md border border-white/20 rounded-xl md:rounded-2xl overflow-hidden shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all group"
                   >
-                    {/* Delete Overlay - Only renders when isDelete is active for this SPECIFIC item */}
-                    {/* 
-                     Issue: `isDelete` state was global boolean. 
-                     Fix: We need a local state or a way to identify which card is being deleted. 
-                     For simplicity in this refactor, let's use a standard window.confirm or a smarter overlay.
-                     For now, let's use the local state with ID.
-                 */}
+                    {/* Delete Overlay */}
                     {isDelete === data._id && (
                       <div className="absolute inset-0 z-20 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center animate-fadeIn">
                         <p className="text-white font-bold mb-3">
@@ -159,7 +137,7 @@ export default function Library() {
                         <div className="flex gap-3">
                           <button
                             className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 text-sm font-medium"
-                            onClick={() => deletePlaylistData(data)}
+                            onClick={() => handleDeletePlaylist(data)}
                           >
                             Delete
                           </button>
@@ -189,7 +167,7 @@ export default function Library() {
 
                         {/* Song Count Badge */}
                         <span className="absolute bottom-2 left-2 bg-black/50 backdrop-blur-sm text-white px-2 py-1 rounded-md text-xs font-medium">
-                          {data.songs.length} Songs
+                          {data.songs?.length || 0} Songs
                         </span>
                       </div>
 
@@ -218,7 +196,7 @@ export default function Library() {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              setIsDelete(data._id); // Set ID instead of boolean
+                              setIsDelete(data._id);
                             }}
                           >
                             <MdDelete className="text-base md:text-lg" />
@@ -228,17 +206,15 @@ export default function Library() {
                     </NavLink>
                   </div>
                 ))}
-            </div>
 
-            {alert && (
-              <>
-                {alert === "success" ? (
-                  <AlertSuccess msg={alertMsg} />
-                ) : (
-                  <AlertError msg={alertMsg} />
-                )}
-              </>
-            )}
+              {/* Empty State */}
+              {!isLoading && (!playlists || playlists.length === 0) && (
+                <div className="col-span-full py-10 flex flex-col items-center justify-center text-gray-400">
+                  <p className="text-lg font-medium">No playlists yet</p>
+                  <p className="text-sm mt-1">Create your first playlist!</p>
+                </div>
+              )}
+            </div>
           </>
         )}
 
@@ -246,15 +222,11 @@ export default function Library() {
           <EditPlaylist
             data={playlistToEdit}
             closeModal={() => setPlaylistToEdit(null)}
-            refreshData={() => {
-              getAllPlaylist().then((data) => {
-                dispatch({
-                  type: actionType.SET_ALL_PLAYLISTS,
-                  playlist: data.data,
-                });
-              });
+            refreshData={() => refetch()}
+            alertConfig={(status, msg) => {
+              if (status === "success") toast.success(msg);
+              else toast.error(msg);
             }}
-            alertConfig={alertConfig}
           />
         )}
       </main>

@@ -1,89 +1,127 @@
+/**
+ * Songs Routes
+ *
+ * PUBLIC: GET /getall, GET /getone/:id
+ * ADMIN ONLY: POST /save, PUT /update/:id, DELETE /delete/:id
+ */
 const router = require("express").Router();
-
 const Song = require("../models/song");
+const ApiResponse = require("../src/utils/apiResponse");
+const {
+  authenticate,
+  requireAdmin,
+  asyncHandler,
+} = require("../src/middleware");
 
-router.post("/save", async (req, res) => {
-  const newSong = new Song({
-    name: req.body.name,
-    imageURL: req.body.imageURL,
-    songURL: req.body.songURL,
-    album: req.body.album,
-    artist: req.body.artist,
-    language: req.body.language,
-    category: req.body.category,
-  });
+/**
+ * @route   POST /api/songs/save
+ * @desc    Create a new song (Admin only)
+ * @access  Private/Admin
+ */
+router.post(
+  "/save",
+  authenticate,
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { name, imageURL, songURL, album, artist, language, category } =
+      req.body;
 
-  try {
+    // Basic validation
+    if (!name || !imageURL || !songURL || !artist || !language || !category) {
+      return ApiResponse.validationError(res, null, "Missing required fields");
+    }
+
+    const newSong = new Song({
+      name,
+      imageURL,
+      songURL,
+      album,
+      artist,
+      language,
+      category,
+    });
+
     const savedSong = await newSong.save();
-    return res.status(200).send({ success: true, song: savedSong });
-  } catch (error) {
-    return res.status(400).send({ success: false, msg: error });
-  }
-});
+    return ApiResponse.created(res, savedSong, "Song created successfully");
+  }),
+);
 
-router.get("/getone/:id", async (req, res) => {
-  const filter = { _id: req.params.id };
+/**
+ * @route   GET /api/songs/getone/:id
+ * @desc    Get a single song by ID
+ * @access  Public
+ */
+router.get(
+  "/getone/:id",
+  asyncHandler(async (req, res) => {
+    const song = await Song.findById(req.params.id).lean();
 
-  const data = await Song.findOne(filter);
+    if (!song) {
+      return ApiResponse.notFound(res, "Song not found");
+    }
 
-  if (data) {
-    return res.status(200).send({ success: true, song: data });
-  } else {
-    return res.status(400).send({ success: false, msg: "Data not found" });
-  }
-});
+    return ApiResponse.success(res, song, "Song retrieved successfully");
+  }),
+);
 
-router.get("/getall", async (req, res) => {
-  const data = await Song.find().sort({ createdAt: 1 }).lean();
+/**
+ * @route   GET /api/songs/getall
+ * @desc    Get all songs
+ * @access  Public
+ */
+router.get(
+  "/getall",
+  asyncHandler(async (req, res) => {
+    const songs = await Song.find().sort({ createdAt: -1 }).lean();
+    return ApiResponse.success(res, songs, "Songs retrieved successfully");
+  }),
+);
 
-  if (data) {
-    return res.status(200).send({ success: true, song: data });
-  } else {
-    return res.status(400).send({ success: false, msg: "Data not found" });
-  }
-});
+/**
+ * @route   PUT /api/songs/update/:id
+ * @desc    Update a song (Admin only)
+ * @access  Private/Admin
+ */
+router.put(
+  "/update/:id",
+  authenticate,
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { name, imageURL, songURL, album, artist, language, category } =
+      req.body;
 
-router.put("/update/:id", async (req, res) => {
-  const filter = { _id: req.params.id };
-  const options = { new: true };
-
-  try {
-    const result = await Song.findOneAndUpdate(
-      filter,
-      {
-        name: req.body.name,
-        imageURL: req.body.imageURL,
-        songURL: req.body.songURL,
-        album: req.body.album,
-        artist: req.body.artist,
-        language: req.body.language,
-        category: req.body.category,
-      },
-      options
+    const song = await Song.findByIdAndUpdate(
+      req.params.id,
+      { name, imageURL, songURL, album, artist, language, category },
+      { new: true, runValidators: true },
     );
 
-    if (result) {
-      return res.status(200).send({ success: true, data: result });
-    } else {
-      return res.status(404).send({ success: false, msg: "Song not found" });
+    if (!song) {
+      return ApiResponse.notFound(res, "Song not found");
     }
-  } catch (error) {
-    return res.status(400).send({ success: false, msg: error });
-  }
-});
 
-router.delete("/delete/:id", async (req, res) => {
-  const filter = { _id: req.params.id };
+    return ApiResponse.success(res, song, "Song updated successfully");
+  }),
+);
 
-  const result = await Song.deleteOne(filter);
+/**
+ * @route   DELETE /api/songs/delete/:id
+ * @desc    Delete a song (Admin only)
+ * @access  Private/Admin
+ */
+router.delete(
+  "/delete/:id",
+  authenticate,
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const result = await Song.findByIdAndDelete(req.params.id);
 
-  if (result.deletedCount === 1) {
-    return res
-      .status(200)
-      .send({ success: true, msg: "Data deleted successfully" });
-  } else {
-    return res.status(400).send({ success: false, msg: "Data not found" });
-  }
-});
+    if (!result) {
+      return ApiResponse.notFound(res, "Song not found");
+    }
+
+    return ApiResponse.success(res, null, "Song deleted successfully");
+  }),
+);
 
 module.exports = router;

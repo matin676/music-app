@@ -1,31 +1,37 @@
-import React, { useEffect, useState } from "react";
+/**
+ * DashboardAlbums Component
+ *
+ * Admin dashboard for managing albums.
+ * Uses React Query for data fetching with automatic cache invalidation.
+ */
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { IoTrash, IoPencil } from "react-icons/io5";
 import { deleteObject, ref } from "firebase/storage";
+import toast from "react-hot-toast";
 
-import { useStateValue } from "../../context/StateProvider";
-import { deleteAlbumById } from "../../api";
-import { actionType } from "../../context/reducer";
 import { storage } from "../../config/firebase.config";
-import AlbumCard from "../Cards/AlbumCard";
-import { useData } from "../../hooks/useData";
+import { useAlbums, useDeleteAlbum } from "../../features/library/hooks";
 import EditAlbum from "./EditAlbum";
+import { Skeleton } from "../../shared/components";
 
 // Album List Row Component
-export const AlbumListRow = ({ data, index, setAlbumToEdit }) => {
-  const { refreshAllData } = useData();
+export const AlbumListRow = ({ data, index, setAlbumToEdit, onDelete }) => {
   const [isDelete, setIsDelete] = useState(false);
-  const [{ allAlbums }, dispatch] = useStateValue();
 
-  const deleteData = (data) => {
-    const deleteRef = ref(storage, data.imageURL);
-    deleteObject(deleteRef).then(() => {});
+  const handleDelete = async () => {
+    try {
+      // Delete image from Firebase Storage
+      const deleteRef = ref(storage, data.imageURL);
+      await deleteObject(deleteRef).catch(() => {});
 
-    deleteAlbumById(data._id).then((res) => {
-      if (res.data) {
-        refreshAllData();
-      }
-    });
+      // Delete from database using mutation
+      await onDelete(data._id);
+      setIsDelete(false);
+      toast.success(`"${data.name}" deleted successfully`);
+    } catch (error) {
+      toast.error("Failed to delete album");
+    }
   };
 
   return (
@@ -80,7 +86,7 @@ export const AlbumListRow = ({ data, index, setAlbumToEdit }) => {
             <div className="flex gap-2">
               <button
                 className="flex-1 py-1 px-2 text-xs font-bold bg-red-500 text-white rounded hover:bg-red-600"
-                onClick={() => deleteData(data)}
+                onClick={handleDelete}
               >
                 Delete
               </button>
@@ -99,13 +105,11 @@ export const AlbumListRow = ({ data, index, setAlbumToEdit }) => {
 };
 
 export default function DashboardAlbums() {
-  const { fetchAlbums } = useData();
   const [albumToEdit, setAlbumToEdit] = useState(null);
-  const [{ allAlbums }, dispatch] = useStateValue();
 
-  useEffect(() => {
-    fetchAlbums();
-  }, [fetchAlbums]);
+  // React Query hooks
+  const { data: albums, isLoading, refetch } = useAlbums();
+  const deleteAlbumMutation = useDeleteAlbum();
 
   return (
     <div className="w-full flex flex-col gap-6 p-4">
@@ -116,7 +120,7 @@ export default function DashboardAlbums() {
           <p className="text-xs text-gray-500">Manage your music albums</p>
         </div>
         <span className="px-4 py-1 bg-white text-headingColor font-bold rounded-lg shadow-sm border border-gray-100">
-          Total: {allAlbums?.length || 0}
+          Total: {albums?.length || 0}
         </span>
       </div>
 
@@ -130,18 +134,34 @@ export default function DashboardAlbums() {
         </div>
 
         <div className="flex flex-col gap-2">
-          {allAlbums &&
-            allAlbums.map((album, i) => (
+          {/* Loading Skeletons */}
+          {isLoading &&
+            [...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className="w-full grid grid-cols-[auto_1fr_auto] gap-4 p-3 bg-white/30 rounded-lg"
+              >
+                <Skeleton className="w-12 h-12 rounded-lg" />
+                <Skeleton className="w-32 h-4" variant="text" />
+                <Skeleton className="w-16 h-8" variant="rect" />
+              </div>
+            ))}
+
+          {/* Albums List */}
+          {!isLoading &&
+            albums?.map((album, i) => (
               <AlbumListRow
                 key={album._id}
                 data={album}
                 index={i}
                 setAlbumToEdit={setAlbumToEdit}
+                onDelete={(id) => deleteAlbumMutation.mutateAsync(id)}
               />
             ))}
         </div>
 
-        {(!allAlbums || allAlbums.length === 0) && (
+        {/* Empty State */}
+        {!isLoading && (!albums || albums.length === 0) && (
           <div className="w-full py-20 flex justify-center text-gray-400">
             No albums found
           </div>
@@ -152,7 +172,7 @@ export default function DashboardAlbums() {
         <EditAlbum
           data={albumToEdit}
           close={() => setAlbumToEdit(null)}
-          refreshData={() => fetchAlbums(true)}
+          refreshData={() => refetch()}
         />
       )}
     </div>

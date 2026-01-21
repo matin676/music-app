@@ -72,7 +72,8 @@ export const removeUser = async (userId) => {
 export const saveNewSong = async (data) => {
   try {
     const res = await apiClient.post("api/songs/save/", { ...data });
-    return res.data.savedSong;
+    // New API returns { success, message, data }
+    return res.data?.data || res.data;
   } catch (error) {
     return null;
   }
@@ -81,7 +82,8 @@ export const saveNewSong = async (data) => {
 export const saveNewArtist = async (data) => {
   try {
     const res = await apiClient.post("api/artists/save/", { ...data });
-    return res.data.savedArtist;
+    // New API returns { success, message, data }
+    return res.data?.data || res.data;
   } catch (error) {
     return null;
   }
@@ -90,7 +92,8 @@ export const saveNewArtist = async (data) => {
 export const saveNewAlbum = async (data) => {
   try {
     const res = await apiClient.post("api/albums/save/", { ...data });
-    return res.data.savedAlbum;
+    // New API returns { success, message, data }
+    return res.data?.data || res.data;
   } catch (error) {
     return null;
   }
@@ -154,7 +157,7 @@ export const updateProfileById = async (userId, updatedUserData) => {
   try {
     const res = await apiClient.put(
       `api/users/updateuser/${userId}`,
-      updatedUserData
+      updatedUserData,
     );
     return res.data;
   } catch (error) {
@@ -166,7 +169,7 @@ export const savePlaylist = async (playlistData) => {
   try {
     const res = await apiClient.post(
       "api/playlists/savePlaylist",
-      playlistData
+      playlistData,
     );
     return res.data;
   } catch (error) {
@@ -188,11 +191,7 @@ export const getPlaylistById = async (playlistId) => {
     const res = await apiClient.get(`api/playlists/getplaylist/${playlistId}`);
     return res.data;
   } catch (error) {
-    if (error.response && error.response.status === 404) {
-      console.error("Playlist not found.");
-    } else {
-      console.error("Error fetching playlist by ID:", error);
-    }
+    // Re-throw error to be handled by caller
     throw error;
   }
 };
@@ -200,7 +199,7 @@ export const getPlaylistById = async (playlistId) => {
 export const deletePlaylistById = async (playlistId) => {
   try {
     const res = await apiClient.delete(
-      `api/playlists/deleteplaylist/${playlistId}`
+      `api/playlists/deleteplaylist/${playlistId}`,
     );
     return res;
   } catch (error) {
@@ -245,7 +244,7 @@ export const removeSongFromPlaylist = async (playlistId, songId) => {
       `api/playlists/update/${playlistId}/remove`,
       {
         songId,
-      }
+      },
     );
     return res.data;
   } catch (error) {

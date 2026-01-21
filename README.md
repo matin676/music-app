@@ -6,97 +6,111 @@ A modern, full-stack music streaming platform designed for a premium user experi
 
 ### 👤 User Features
 
-- **Authentication**: Secure Google Sign-in via Firebase.
+- **Authentication**: Secure Google Sign-in via Firebase
 - **Dynamic Discovery**:
-  - **Featured Track**: Automatically rotates every 6 minutes to showcase random songs from the library. Pauses on hover for a natural user experience.
-  - **Filtering**: Robust filtering by **Artist**, **Album**, **Language**, and **Category**.
-  - **Search**: Real-time search for songs, artists, and albums.
+  - **Featured Track**: Automatically rotates every 6 minutes
+  - **Filtering**: By Artist, Album, Language, and Category
+  - **Search**: Real-time search for songs, artists, and albums
 - **Music Player**:
-  - Full playback control (Play, Pause, Next, Prev, Seek).
-  - Gapless playback across the application.
+  - Full playback control (Play, Pause, Next, Prev, Seek)
+  - Shuffle and Repeat modes
+  - Mini player mode
 - **Library Management**:
-  - "Like" songs to add them to your **Favorites**.
-  - Create and manage custom **Playlists**.
-- **Responsive Design**: Mobile-first approach. The interface adapts perfectly to all screen sizes (Desktop, Tablet, Mobile).
+  - "Like" songs to add to Favorites
+  - Create and manage custom Playlists
 
 ### 🛡️ Admin Features
 
-- **Dashboard Access**: Exclusive access to the administrative dashboard (`/dashboard/*`).
-- **Content Management**:
-  - **Upload Songs**: Add new tracks with audio files and album art (stored in Firebase Storage).
-  - **Manage Metadata**: Create and edit Artists and Albums.
-  - **Delete Content**: Remove songs, artists, or albums directly from the database and storage.
-- **User Management**: View all registered users and manage their roles (promote to Admin / demote to Member).
+- **Dashboard**: Content management interface
+- **Upload Songs**: Add tracks with audio and album art
+- **Manage Metadata**: Create/edit Artists and Albums
+- **User Management**: Manage user roles (Admin/Member)
 
-## 👥 Roles Strategy
+## 🔒 Security
 
-The application enforces role-based access control (RBAC):
-
-1. **Member**: The default role for all new users.
-
-   - _Capabilities_: Listen to music, search, filter, manage favorites/playlists.
-   - _Restrictions_: Cannot access the Dashboard or modify global content.
-
-2. **Admin**: High-level privilege role.
-   - _Capabilities_: All Member capabilities + Full Dashboard access.
-   - _Responsibilities_: Content moderation, uploading new music, managing user roles.
+- Server-side authentication via Firebase Admin SDK
+- Role-based access control (RBAC) with middleware
+- Data isolation - users can only access their own data
+- Standardized API responses for consistent error handling
 
 ## 🛠️ Tech Stack
 
-### Frontend (Client)
+| Layer             | Technologies                                                         |
+| ----------------- | -------------------------------------------------------------------- |
+| **Frontend**      | React 19, Vite, Tailwind CSS v4, Zustand, React Query, Framer Motion |
+| **Backend**       | Node.js, Express 5, MongoDB, Mongoose                                |
+| **Auth/Storage**  | Firebase (Auth + Storage)                                            |
+| **Design System** | UI UX Pro Max (Righteous + Poppins fonts, vibrant palette)           |
 
-- **React 19** + **Vite**: Ultra-fast development and performant builds.
-- **Tailwind CSS (v4)**: Advanced styling with a mobile-first approach.
-- **Framer Motion**: Smooth, natural animations (e.g., Hero section transitions).
-- **Firebase SDK**: Auth and Storage interactions.
-- **Axios**: Efficient HTTP requests.
+## 📁 Project Structure
 
-### Backend (Server)
+```
+client/src/
+├── components/         # Page components
+├── features/           # Feature modules (auth, library, player)
+├── services/api/       # API layer with auth interceptors
+├── shared/components/  # Reusable UI (ErrorBoundary, Loading, Skeleton)
+└── styles/             # Design tokens
 
-- **Node.js** + **Express**: Robust REST API.
-- **MongoDB** + **Mongoose**: Flexible data modeling for Songs, Artists, Albums, and Users.
-- **Firebase Admin SDK**: Secure server-side token verification.
+server/
+├── models/             # Mongoose schemas
+├── routes/             # API routes
+└── src/middleware/     # Auth, admin, error handling
+```
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Node.js (v18+ recommended)
+- Node.js v18+
 - MongoDB URI
 - Firebase Project (Auth & Storage enabled)
 
 ### Local Setup
 
-1. **Clone the repo**
+```bash
+# Clone
+git clone https://github.com/matin676/music-app.git
+cd music-app
 
-   ```bash
-   git clone https://github.com/matin676/music-app.git
-   cd music-app
-   ```
+# Server
+cd server
+npm install
+npm run dev
 
-2. **Server Setup**
+# Client (new terminal)
+cd client
+npm install
+npm run dev
+```
 
-   ```bash
-   cd server
-   npm install
-   # Create .env with PORT, DB_STRING, and Firebase service account credentials
-   npm run dev
-   ```
+### Environment Variables
 
-3. **Client Setup**
+**Server (.env)**
 
-   ```bash
-   cd client
-   npm install
-   # Create .env with VITE_FIREBASE_* keys and VITE_API_BASE_URL
-   npm run dev
-   ```
+```
+PORT=4000
+DB_STRING=mongodb+srv://...
+FIREBASE_* credentials
+```
 
-## ☁️ Deployment
+**Client (.env)**
 
-- **Client**: Deployed on [Netlify](https://www.netlify.com/).
-- **Server**: Deployed on [Render](https://render.com/).
+```
+VITE_API_BASE_URL=http://localhost:4000
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=...
+VITE_FIREBASE_PROJECT_ID=...
+VITE_FIREBASE_STORAGE_BUCKET=...
+```
+
+## 🧪 Testing
+
+```bash
+cd client
+npm test
+```
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+MIT License

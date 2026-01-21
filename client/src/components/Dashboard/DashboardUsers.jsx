@@ -1,36 +1,53 @@
-import React, { useEffect, useState } from "react";
+/**
+ * DashboardUsers Component
+ *
+ * Admin dashboard for managing users.
+ * Uses React Query for data fetching with automatic cache invalidation.
+ */
+import React, { useState } from "react";
 import { MdDelete } from "react-icons/md";
 import { motion } from "framer-motion";
 import moment from "moment";
+import toast from "react-hot-toast";
 
 import { useStateValue } from "../../context/StateProvider";
-import { actionType } from "../../context/reducer";
-import { changingUserRole, removeUser } from "../../api";
-import { useData } from "../../hooks/useData";
+import {
+  useUsers,
+  useUpdateUserRole,
+  useDeleteUser,
+} from "../../features/admin/hooks";
+import { Skeleton } from "../../shared/components";
 
 // DashboardUserCard Component
-export const DashboardUserCard = ({ data, index }) => {
-  const { refreshAllData } = useData();
-  const [{ user, allUsers }, dispatch] = useStateValue();
+export const DashboardUserCard = ({
+  data,
+  index,
+  currentUserId,
+  onUpdateRole,
+  onDelete,
+}) => {
   const [isUserRoleUpdated, setIsUserRoleUpdated] = useState(false);
 
   const createdAt = moment(new Date(data.createdAt)).format("MMM Do YYYY");
 
-  const updateUserRole = (userId, role) => {
-    setIsUserRoleUpdated(false);
-    changingUserRole(userId, role).then((res) => {
-      if (res) {
-        refreshAllData();
-      }
-    });
+  const handleRoleUpdate = async () => {
+    try {
+      const newRole = data.role === "admin" ? "member" : "admin";
+      await onUpdateRole({ userId: data._id, role: newRole });
+      setIsUserRoleUpdated(false);
+      toast.success(`${data.name} is now ${newRole}`);
+    } catch (error) {
+      toast.error("Failed to update role");
+    }
   };
 
-  const deleteUser = (userId) => {
-    removeUser(userId).then((res) => {
-      if (res) {
-        refreshAllData();
-      }
-    });
+  const handleDelete = async () => {
+    try {
+      await onDelete(data._id);
+      toast.success(`${data.name} has been removed`);
+    } catch (error) {
+      toast.error("Failed to delete user");
+    }
   };
 
   return (
@@ -92,7 +109,7 @@ export const DashboardUserCard = ({ data, index }) => {
             <span className="text-[10px] md:text-xs font-bold uppercase tracking-wide">
               {data.role}
             </span>
-            {data._id !== user?.user._id && (
+            {data._id !== currentUserId && (
               <button
                 onClick={() => setIsUserRoleUpdated(!isUserRoleUpdated)}
                 className="w-4 h-4 md:w-5 md:h-5 flex items-center justify-center rounded-full bg-black/5 hover:bg-black/10 transition-colors"
@@ -118,12 +135,7 @@ export const DashboardUserCard = ({ data, index }) => {
               <div className="flex gap-2">
                 <button
                   className="flex-1 py-1 text-xs font-bold text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors"
-                  onClick={() =>
-                    updateUserRole(
-                      data._id,
-                      data.role === "admin" ? "member" : "admin"
-                    )
-                  }
+                  onClick={handleRoleUpdate}
                 >
                   Yes
                 </button>
@@ -141,11 +153,11 @@ export const DashboardUserCard = ({ data, index }) => {
 
       {/* Delete Action (Far Right) */}
       <div className="w-8 md:w-10 flex justify-end shrink-0">
-        {data._id !== user?.user._id ? (
+        {data._id !== currentUserId ? (
           <motion.button
             whileTap={{ scale: 0.9 }}
             className="w-7 h-7 md:w-8 md:h-8 flex items-center justify-center rounded-full bg-gray-50 text-red-400 hover:bg-red-500 hover:text-white transition-all shadow-sm border border-gray-100"
-            onClick={() => deleteUser(data._id)}
+            onClick={handleDelete}
             title="Delete User"
           >
             <MdDelete className="text-base md:text-lg" />
@@ -159,12 +171,12 @@ export const DashboardUserCard = ({ data, index }) => {
 };
 
 export default function DashboardUsers() {
-  const { fetchUsers } = useData();
-  const [{ allUsers }, dispatch] = useStateValue();
+  const [{ user }] = useStateValue();
 
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+  // React Query hooks
+  const { data: users, isLoading } = useUsers();
+  const updateRoleMutation = useUpdateUserRole();
+  const deleteUserMutation = useDeleteUser();
 
   return (
     <div className="w-full flex px-2 md:px-4 pb-4 flex-col gap-3 md:gap-4">
@@ -174,7 +186,7 @@ export default function DashboardUsers() {
           All Users
         </p>
         <span className="px-3 md:px-4 py-1 bg-white text-headingColor font-bold text-sm md:text-base rounded-lg shadow-sm border border-gray-100">
-          Total: {allUsers?.length || 0}
+          Total: {users?.length || 0}
         </span>
       </div>
 
@@ -189,10 +201,38 @@ export default function DashboardUsers() {
 
       {/* Users List */}
       <div className="flex flex-col gap-2 md:gap-3 relative">
-        {allUsers?.map((data, i) => (
-          <DashboardUserCard data={data} key={i} index={i} />
-        ))}
-        {(!allUsers || allUsers.length === 0) && (
+        {/* Loading Skeletons */}
+        {isLoading &&
+          [...Array(4)].map((_, i) => (
+            <div
+              key={i}
+              className="w-full grid grid-cols-[auto_1fr_auto_auto] gap-4 p-4 bg-white rounded-xl"
+            >
+              <Skeleton className="w-12 h-12 rounded-full" variant="circle" />
+              <div className="flex flex-col gap-2">
+                <Skeleton className="w-32 h-4" variant="text" />
+                <Skeleton className="w-48 h-3" variant="text" />
+              </div>
+              <Skeleton className="w-20 h-4" variant="text" />
+              <Skeleton className="w-16 h-6" variant="rect" />
+            </div>
+          ))}
+
+        {/* Users */}
+        {!isLoading &&
+          users?.map((data, i) => (
+            <DashboardUserCard
+              data={data}
+              key={data._id}
+              index={i}
+              currentUserId={user?.user?._id}
+              onUpdateRole={(args) => updateRoleMutation.mutateAsync(args)}
+              onDelete={(id) => deleteUserMutation.mutateAsync(id)}
+            />
+          ))}
+
+        {/* Empty State */}
+        {!isLoading && (!users || users.length === 0) && (
           <div className="w-full py-20 flex justify-center text-gray-400">
             No users found
           </div>

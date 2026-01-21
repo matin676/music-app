@@ -1,7 +1,13 @@
+/**
+ * Home Page Component
+ *
+ * Main landing page with featured songs, categories, and filtering.
+ * Uses React Query for data fetching with automatic caching.
+ */
 import React, { useEffect, useMemo, useCallback } from "react";
 import { IoArrowUp } from "react-icons/io5";
-
 import { motion, AnimatePresence } from "framer-motion";
+import toast from "react-hot-toast";
 
 import Header from "../Shared/Header";
 import Filter from "../Shared/Filter";
@@ -10,16 +16,19 @@ import HeroSection from "./HeroSection";
 import HorizontalSongCarousel from "./HorizontalSongCarousel";
 import { useStateValue } from "../../context/StateProvider";
 import { actionType } from "../../context/reducer";
-import { useData } from "../../hooks/useData";
-import { updateUserFavourites } from "../../api";
+import { useSongs } from "../../features/library/hooks";
+import { usersApi } from "../../services/api/users";
 import SEO from "../Shared/SEO";
+import { SongCardSkeleton } from "../../shared/components";
 
 export default function Home() {
-  const { fetchSongs } = useData();
+  // React Query - songs data with automatic caching
+  const { data: songs, isLoading } = useSongs();
+
+  // Context for filters and favourites (still needed for cross-component state)
   const [
     {
       searchTerm,
-      allSongs,
       artistFilter,
       filterTerm,
       albumFilter,
@@ -30,31 +39,32 @@ export default function Home() {
     dispatch,
   ] = useStateValue();
 
+  // Sync songs to context for player compatibility
+  useEffect(() => {
+    if (songs && songs.length > 0) {
+      dispatch({ type: actionType.SET_ALL_SONGS, allSongs: songs });
+    }
+  }, [songs, dispatch]);
+
   // Dynamic Featured Song Logic
   const [featuredIndex, setFeaturedIndex] = React.useState(0);
-  const [isHovered, setIsHovered] = React.useState(false); // Keep for UI if needed, or remove if not used for rendering
-  const isHoverRef = React.useRef(false); // Ref for interval access
+  const isHoverRef = React.useRef(false);
 
   useEffect(() => {
-    if (allSongs && allSongs.length > 0) {
-      // Only set initial random index if we haven't yet (or maybe just once on mount/songs load)
-      // Actually, we can just set it once when songs load.
-      // But to prevent it from resetting on every dependency change, we should check if we really need to.
-      // For now, let's rely on the fact that we'll separate the interval.
-      const randomIndex = Math.floor(Math.random() * allSongs.length);
+    if (songs && songs.length > 0) {
+      const randomIndex = Math.floor(Math.random() * songs.length);
       setFeaturedIndex(randomIndex);
     }
-  }, [allSongs]); // Run only when allSongs changes
+  }, [songs]);
 
   useEffect(() => {
-    if (allSongs && allSongs.length > 0) {
+    if (songs && songs.length > 0) {
       const interval = setInterval(() => {
         if (!isHoverRef.current) {
           setFeaturedIndex((prev) => {
-            let nextIndex = Math.floor(Math.random() * allSongs.length);
-            // Ensure we don't pick the same song twice in a row if possible
-            if (nextIndex === prev && allSongs.length > 1) {
-              nextIndex = (prev + 1) % allSongs.length;
+            let nextIndex = Math.floor(Math.random() * songs.length);
+            if (nextIndex === prev && songs.length > 1) {
+              nextIndex = (prev + 1) % songs.length;
             }
             return nextIndex;
           });
@@ -63,54 +73,42 @@ export default function Home() {
 
       return () => clearInterval(interval);
     }
-  }, [allSongs]); // Independent of isHovered state
+  }, [songs]);
 
   const handleMouseEnter = () => {
-    setIsHovered(true);
     isHoverRef.current = true;
   };
 
   const handleMouseLeave = () => {
-    setIsHovered(false);
     isHoverRef.current = false;
   };
 
+  // Scroll to top button
   const [showTopBtn, setShowTopBtn] = React.useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 400) {
-        setShowTopBtn(true);
-      } else {
-        setShowTopBtn(false);
-      }
+      setShowTopBtn(window.scrollY > 400);
     };
-
     window.addEventListener("scroll", handleScroll);
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const goToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   // Memoized filtering logic
   const filteredSongs = useMemo(() => {
-    if (!allSongs) return null;
+    if (!songs) return null;
 
     if (searchTerm && searchTerm.length > 0) {
-      return allSongs.filter((data) => {
+      return songs.filter((data) => {
         const artistMatch = Array.isArray(data.artist)
           ? data.artist.some(
               (a) =>
                 typeof a === "string" &&
-                a.toLowerCase().includes(searchTerm.toLowerCase())
+                a.toLowerCase().includes(searchTerm.toLowerCase()),
             )
           : typeof data.artist === "string" &&
             data.artist.toLowerCase().includes(searchTerm.toLowerCase());
@@ -127,29 +125,29 @@ export default function Home() {
     }
 
     if (artistFilter) {
-      return allSongs.filter((data) =>
+      return songs.filter((data) =>
         Array.isArray(data.artist)
           ? data.artist.includes(artistFilter)
-          : data.artist === artistFilter
+          : data.artist === artistFilter,
       );
     }
 
     if (albumFilter) {
-      return allSongs.filter((data) => data.album === albumFilter);
+      return songs.filter((data) => data.album === albumFilter);
     }
 
     if (languageFilter) {
-      return allSongs.filter((data) => data.language === languageFilter);
+      return songs.filter((data) => data.language === languageFilter);
     }
 
     if (filterTerm) {
-      return allSongs.filter((data) =>
+      return songs.filter((data) =>
         Array.isArray(data.category)
           ? data.category.some(
-              (c) => typeof c === "string" && c.toLowerCase() === filterTerm
+              (c) => typeof c === "string" && c.toLowerCase() === filterTerm,
             )
           : typeof data.category === "string" &&
-            data.category.toLowerCase() === filterTerm
+            data.category.toLowerCase() === filterTerm,
       );
     }
 
@@ -160,27 +158,14 @@ export default function Home() {
     albumFilter,
     languageFilter,
     filterTerm,
-    allSongs,
+    songs,
   ]);
 
-  // Alert State
-  const [alert, setAlert] = React.useState(false);
-  const [alertMsg, setAlertMsg] = React.useState(null);
-
-  const alertConfig = (status, msg) => {
-    setAlert(status);
-    setAlertMsg(msg);
-    setTimeout(() => {
-      setAlert(null);
-      setAlertMsg(null);
-    }, 4000);
-  };
-
-  // Memoized toggle favorite handler
+  // Toggle favorite handler
   const toggleFavorite = useCallback(
     async (songId) => {
       if (!user) {
-        alertConfig("error", "Please login to manage favorites");
+        toast.error("Please login to manage favorites");
         return;
       }
 
@@ -195,18 +180,29 @@ export default function Home() {
       });
 
       // Sync with backend
-      await updateUserFavourites(user?.user?._id, songId);
+      try {
+        await usersApi.toggleFavourite(user?.user?._id, songId);
+      } catch (error) {
+        // Revert on error
+        dispatch({
+          type: isFavorited
+            ? actionType.ADD_TO_FAVORITES
+            : actionType.REMOVE_TO_FAVORITES,
+          index: songId,
+        });
+        toast.error("Failed to update favorites");
+      }
     },
-    [favourites, user, dispatch]
+    [favourites, user, dispatch],
   );
 
   // Get songs to display (filtered or all)
-  const displaySongs = filteredSongs || allSongs;
+  const displaySongs = filteredSongs || songs;
 
   // Derive featured song
   const featuredSong = useMemo(
-    () => allSongs?.[featuredIndex],
-    [allSongs, featuredIndex]
+    () => songs?.[featuredIndex],
+    [songs, featuredIndex],
   );
 
   // Memoized category grouping
@@ -214,17 +210,14 @@ export default function Home() {
     if (!displaySongs) return {};
 
     const result = {};
-
-    // Dynamically categorize songs based on their category field
     displaySongs.forEach((song) => {
-      // Normalize category to array
       const categories = Array.isArray(song.category)
         ? song.category
         : [song.category];
 
       categories.forEach((cat) => {
         if (typeof cat !== "string") return;
-        const category = cat.toLowerCase(); // Ensure lowercase key
+        const category = cat.toLowerCase();
         if (!result[category]) {
           result[category] = [];
         }
@@ -238,7 +231,7 @@ export default function Home() {
   // Memoized recent songs
   const recentSongs = useMemo(
     () => displaySongs?.slice(-10).reverse(),
-    [displaySongs]
+    [displaySongs],
   );
 
   // Check if any filter is active
@@ -299,27 +292,40 @@ export default function Home() {
         )}
 
         {/* Category Sections */}
-        {Object.entries(categorizedSongs).map(([category, songs]) => {
-          if (!songs || songs.length === 0) return null;
+        {Object.entries(categorizedSongs).map(([category, categorySongs]) => {
+          if (!categorySongs || categorySongs.length === 0) return null;
 
           return (
             <HorizontalSongCarousel
               key={category}
               title={category.charAt(0).toUpperCase() + category.slice(1)}
-              songs={songs}
+              songs={categorySongs}
               favourites={favourites}
               toggleFavorite={toggleFavorite}
             />
           );
         })}
 
-        {/* Empty State */}
-        {(!displaySongs || displaySongs.length === 0) && (
-          <div className="w-full py-20 flex flex-col items-center justify-center text-gray-400">
-            <p className="text-xl font-medium">No songs found</p>
-            <p className="text-sm mt-2">Try adjusting your filters</p>
+        {/* Loading State */}
+        {isLoading && (
+          <div className="w-full py-8">
+            <div className="flex overflow-x-auto gap-4 pb-4">
+              {[...Array(5)].map((_, i) => (
+                <SongCardSkeleton key={i} />
+              ))}
+            </div>
           </div>
         )}
+
+        {/* Empty State - Only show when loaded but no results */}
+        {!isLoading &&
+          songs &&
+          (!displaySongs || displaySongs.length === 0) && (
+            <div className="w-full py-20 flex flex-col items-center justify-center text-gray-400">
+              <p className="text-xl font-medium">No songs found</p>
+              <p className="text-sm mt-2">Try adjusting your filters</p>
+            </div>
+          )}
       </main>
 
       {showTopBtn && (

@@ -20,12 +20,12 @@ export const useData = () => {
         if (data) {
           dispatch({
             type: actionType.SET_ALL_SONGS,
-            allSongs: data.song,
+            allSongs: data.data,
           });
         }
       }
     },
-    [allSongs, dispatch]
+    [allSongs, dispatch],
   );
 
   const fetchArtists = useCallback(
@@ -35,12 +35,12 @@ export const useData = () => {
         if (data) {
           dispatch({
             type: actionType.SET_ALL_ARTISTS,
-            allArtists: data.artist,
+            allArtists: data.data,
           });
         }
       }
     },
-    [allArtists, dispatch]
+    [allArtists, dispatch],
   );
 
   const fetchAlbums = useCallback(
@@ -50,12 +50,12 @@ export const useData = () => {
         if (data) {
           dispatch({
             type: actionType.SET_ALL_ALBUMS,
-            allAlbums: data.album,
+            allAlbums: data.data,
           });
         }
       }
     },
-    [allAlbums, dispatch]
+    [allAlbums, dispatch],
   );
 
   const fetchUsers = useCallback(
@@ -65,12 +65,12 @@ export const useData = () => {
         if (data) {
           dispatch({
             type: actionType.SET_ALL_USERS,
-            allUsers: data.user,
+            allUsers: data.data,
           });
         }
       }
     },
-    [allUsers, dispatch]
+    [allUsers, dispatch],
   );
 
   const fetchPlaylists = useCallback(async () => {
@@ -95,16 +95,16 @@ export const useData = () => {
     ]);
 
     if (songs)
-      dispatch({ type: actionType.SET_ALL_SONGS, allSongs: songs.song });
+      dispatch({ type: actionType.SET_ALL_SONGS, allSongs: songs.data });
     if (artists)
       dispatch({
         type: actionType.SET_ALL_ARTISTS,
-        allArtists: artists.artist,
+        allArtists: artists.data,
       });
     if (albums)
-      dispatch({ type: actionType.SET_ALL_ALBUMS, allAlbums: albums.album });
+      dispatch({ type: actionType.SET_ALL_ALBUMS, allAlbums: albums.data });
     if (users)
-      dispatch({ type: actionType.SET_ALL_USERS, allUsers: users.user });
+      dispatch({ type: actionType.SET_ALL_USERS, allUsers: users.data });
     if (playlists)
       dispatch({
         type: actionType.SET_ALL_PLAYLISTS,

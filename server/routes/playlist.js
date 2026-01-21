@@ -1,166 +1,251 @@
+/**
+ * Playlist Routes
+ *
+ * All playlist operations require authentication
+ * Users can only manage their own playlists
+ */
 const router = require("express").Router();
-
 const Playlist = require("../models/playlist");
+const ApiResponse = require("../src/utils/apiResponse");
+const {
+  authenticate,
+  asyncHandler,
+  attachDbUser,
+} = require("../src/middleware");
 
-router.post("/savePlaylist", async (req, res) => {
-  const newPlaylist = new Playlist({
-    name: req.body.name,
-    imageURL: req.body.imageURL,
-    songs: req.body.songs.map((songId) => ({
-      songId: songId,
-      addedAt: Date.now(),
-    })),
-    user: req.body.user,
-  });
-  try {
-    const savedPlaylist = await newPlaylist.save();
-    return res.status(200).send({ success: true, playlist: savedPlaylist });
-  } catch (error) {
-    return res.status(400).send({ success: false, msg: error });
-  }
-});
+/**
+ * @route   POST /api/playlists/savePlaylist
+ * @desc    Create a new playlist
+ * @access  Private
+ */
+router.post(
+  "/savePlaylist",
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const { name, imageURL, songs = [] } = req.body;
 
-router.get("/getall", async (req, res) => {
-  try {
-    const playlists = await Playlist.find().sort({ createdAt: -1 });
-
-    // Migration: Convert string IDs to Objects if needed
-    const updatedPlaylists = await Promise.all(
-      playlists.map(async (playlist) => {
-        if (
-          playlist.songs.length > 0 &&
-          typeof playlist.songs[0] === "string"
-        ) {
-          playlist.songs = playlist.songs.map((songId) => ({
-            songId: songId,
-            addedAt: playlist.createdAt,
-          }));
-          await playlist.save();
-        }
-        return playlist;
-      })
-    );
-
-    res.status(200).send({ success: true, data: updatedPlaylists });
-  } catch (error) {
-    console.error("Error fetching playlists:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
-
-router.get("/getplaylist/:id", async (req, res) => {
-  try {
-    const filter = { _id: req.params.id };
-    const data = await Playlist.findOne(filter);
-
-    if (data) {
-      // Migration check
-      if (data.songs.length > 0 && typeof data.songs[0] === "string") {
-        data.songs = data.songs.map((songId) => ({
-          songId: songId,
-          addedAt: data.createdAt,
-        }));
-        await data.save();
-      }
-      return res.status(200).send({ success: true, playlist: data });
-    } else {
-      return res.status(400).send({ success: false, msg: "Data not found" });
+    if (!name) {
+      return ApiResponse.validationError(
+        res,
+        null,
+        "Playlist name is required",
+      );
     }
-  } catch (error) {
-    console.error("Error fetching playlist by ID:", error);
-    return res
-      .status(500)
-      .send({ success: false, msg: "Internal server error" });
-  }
-});
 
-router.put("/update/:id", async (req, res) => {
-  const filter = { _id: req.params.id };
-  const options = {
-    upsert: true,
-    new: true,
-  };
+    const newPlaylist = new Playlist({
+      name,
+      imageURL,
+      songs: songs.map((songId) => ({
+        songId,
+        addedAt: Date.now(),
+      })),
+      user: req.user._id, // Associate with authenticated user's MongoDB _id
+    });
 
-  try {
-    const result = await Playlist.findOneAndUpdate(
-      filter,
-      {
-        name: req.body.name,
-        imageURL: req.body.imageURL,
-      },
-      options
+    const savedPlaylist = await newPlaylist.save();
+    return ApiResponse.created(
+      res,
+      savedPlaylist,
+      "Playlist created successfully",
     );
+  }),
+);
 
-    return res.status(200).send({ success: true, data: result });
-  } catch (error) {
-    return res.status(400).send({ success: false, msg: error });
-  }
-});
+/**
+ * @route   GET /api/playlists/getall
+ * @desc    Get all playlists for the authenticated user
+ * @access  Private
+ */
+router.get(
+  "/getall",
+  authenticate,
+  asyncHandler(async (req, res) => {
+    // Only return playlists belonging to the authenticated user
+    const playlists = await Playlist.find({ user: req.user._id })
+      .sort({ createdAt: -1 })
+      .lean();
 
-// Add song to playlist
-router.put("/update/:id/add", async (req, res) => {
-  const filter = { _id: req.params.id };
-  const songId = req.body.songId;
+    return ApiResponse.success(
+      res,
+      playlists,
+      "Playlists retrieved successfully",
+    );
+  }),
+);
 
-  try {
+/**
+ * @route   GET /api/playlists/getplaylist/:id
+ * @desc    Get a single playlist by ID
+ * @access  Private (owner only)
+ */
+router.get(
+  "/getplaylist/:id",
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const playlist = await Playlist.findById(req.params.id).lean();
+
+    if (!playlist) {
+      return ApiResponse.notFound(res, "Playlist not found");
+    }
+
+    // Check ownership
+    if (playlist.user !== req.user._id) {
+      return ApiResponse.forbidden(res, "You can only view your own playlists");
+    }
+
+    return ApiResponse.success(
+      res,
+      playlist,
+      "Playlist retrieved successfully",
+    );
+  }),
+);
+
+/**
+ * @route   PUT /api/playlists/update/:id
+ * @desc    Update playlist name and image
+ * @access  Private (owner only)
+ */
+router.put(
+  "/update/:id",
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const { name, imageURL } = req.body;
+
     const playlist = await Playlist.findById(req.params.id);
     if (!playlist) {
-      return res
-        .status(400)
-        .send({ success: false, msg: "Playlist not found" });
+      return ApiResponse.notFound(res, "Playlist not found");
+    }
+
+    // Check ownership
+    if (playlist.user !== req.user._id) {
+      return ApiResponse.forbidden(
+        res,
+        "You can only update your own playlists",
+      );
+    }
+
+    const updatedPlaylist = await Playlist.findByIdAndUpdate(
+      req.params.id,
+      { name, imageURL },
+      { new: true },
+    );
+
+    return ApiResponse.success(
+      res,
+      updatedPlaylist,
+      "Playlist updated successfully",
+    );
+  }),
+);
+
+/**
+ * @route   PUT /api/playlists/update/:id/add
+ * @desc    Add a song to playlist
+ * @access  Private (owner only)
+ */
+router.put(
+  "/update/:id/add",
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const { songId } = req.body;
+
+    if (!songId) {
+      return ApiResponse.validationError(res, null, "Song ID is required");
+    }
+
+    const playlist = await Playlist.findById(req.params.id);
+    if (!playlist) {
+      return ApiResponse.notFound(res, "Playlist not found");
+    }
+
+    // Check ownership
+    if (playlist.user !== req.user._id) {
+      return ApiResponse.forbidden(
+        res,
+        "You can only modify your own playlists",
+      );
     }
 
     // Check if song already exists
     const songExists = playlist.songs.some((item) => item.songId === songId);
-    if (!songExists) {
-      playlist.songs.push({ songId: songId, addedAt: Date.now() });
-      const result = await playlist.save();
-      return res.status(200).send({ success: true, data: result });
-    } else {
-      return res.status(200).send({
-        success: true,
-        data: playlist,
-        msg: "Song already in playlist",
-      });
+    if (songExists) {
+      return ApiResponse.success(res, playlist, "Song already in playlist");
     }
-  } catch (error) {
-    return res.status(400).send({ success: false, msg: error });
-  }
-});
 
-// Remove song from playlist
-router.put("/update/:id/remove", async (req, res) => {
-  const filter = { _id: req.params.id };
-  const songId = req.body.songId;
+    playlist.songs.push({ songId, addedAt: Date.now() });
+    const updatedPlaylist = await playlist.save();
 
-  try {
+    return ApiResponse.success(res, updatedPlaylist, "Song added to playlist");
+  }),
+);
+
+/**
+ * @route   PUT /api/playlists/update/:id/remove
+ * @desc    Remove a song from playlist
+ * @access  Private (owner only)
+ */
+router.put(
+  "/update/:id/remove",
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const { songId } = req.body;
+
+    if (!songId) {
+      return ApiResponse.validationError(res, null, "Song ID is required");
+    }
+
     const playlist = await Playlist.findById(req.params.id);
     if (!playlist) {
-      return res
-        .status(400)
-        .send({ success: false, msg: "Playlist not found" });
+      return ApiResponse.notFound(res, "Playlist not found");
+    }
+
+    // Check ownership
+    if (playlist.user !== req.user._id) {
+      return ApiResponse.forbidden(
+        res,
+        "You can only modify your own playlists",
+      );
     }
 
     playlist.songs = playlist.songs.filter((item) => item.songId !== songId);
-    const result = await playlist.save();
-    return res.status(200).send({ success: true, data: result });
-  } catch (error) {
-    return res.status(400).send({ success: false, msg: error });
-  }
-});
+    const updatedPlaylist = await playlist.save();
 
-router.delete("/deleteplaylist/:id", async (req, res) => {
-  const filter = { _id: req.params.id };
+    return ApiResponse.success(
+      res,
+      updatedPlaylist,
+      "Song removed from playlist",
+    );
+  }),
+);
 
-  const result = await Playlist.deleteOne(filter);
+/**
+ * @route   DELETE /api/playlists/deleteplaylist/:id
+ * @desc    Delete a playlist
+ * @access  Private (owner only)
+ */
+router.delete(
+  "/deleteplaylist/:id",
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const playlist = await Playlist.findById(req.params.id);
 
-  if (result.deletedCount === 1) {
-    return res
-      .status(200)
-      .send({ success: true, msg: "Data deleted successfully" });
-  } else {
-    return res.status(400).send({ success: false, msg: "Data not found" });
-  }
-});
+    if (!playlist) {
+      return ApiResponse.notFound(res, "Playlist not found");
+    }
+
+    // Check ownership
+    if (playlist.user !== req.user._id) {
+      return ApiResponse.forbidden(
+        res,
+        "You can only delete your own playlists",
+      );
+    }
+
+    await Playlist.findByIdAndDelete(req.params.id);
+
+    return ApiResponse.success(res, null, "Playlist deleted successfully");
+  }),
+);
 
 module.exports = router;

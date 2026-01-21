@@ -24,12 +24,16 @@ export default function AddToPlaylistModal({ song, closeModal, alertConfig }) {
 
   const handleAddToPlaylist = (playlistId) => {
     addSongToPlaylist(playlistId, song._id).then((res) => {
-      if (res && res.success) {
+      // New API returns { success, message, data }
+      if (res?.success || res?.data) {
         alertConfig("success", "Song added to playlist");
         // Update local reference immediately if needed, or rely on fetch
         // Refresh playlists to get updated song counts if we want
         getAllPlaylist().then((data) => {
-          dispatch({ type: actionType.SET_ALL_PLAYLISTS, playlist: data.data });
+          dispatch({
+            type: actionType.SET_ALL_PLAYLISTS,
+            playlist: data?.data || data,
+          });
         });
         closeModal();
       } else {
@@ -87,7 +91,7 @@ export default function AddToPlaylistModal({ song, closeModal, alertConfig }) {
               }`}
               onClick={() => {
                 const isAdded = data.songs.some(
-                  (item) => item.songId === song._id
+                  (item) => item.songId === song._id,
                 );
                 if (!isAdded) {
                   handleAddToPlaylist(data._id);

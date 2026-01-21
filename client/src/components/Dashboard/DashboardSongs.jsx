@@ -1,37 +1,46 @@
-import React, { useEffect, useState } from "react";
+/**
+ * DashboardSongs Component
+ *
+ * Admin dashboard for managing songs.
+ * Uses React Query for data fetching with automatic cache invalidation.
+ */
+import React, { useState, useMemo } from "react";
 import { NavLink } from "react-router-dom";
 import { IoAdd, IoTrash, IoPencil } from "react-icons/io5";
 import { AiOutlineClear } from "react-icons/ai";
 import { motion } from "framer-motion";
 import { deleteObject, ref } from "firebase/storage";
+import toast from "react-hot-toast";
 
 import { useStateValue } from "../../context/StateProvider";
-import { deleteSongById } from "../../api";
 import { actionType } from "../../context/reducer";
 import { storage } from "../../config/firebase.config";
 import SongCard from "../Cards/SongCard";
-import { useData } from "../../hooks/useData";
+import { useSongs, useDeleteSong } from "../../features/library/hooks";
 import EditSong from "./EditSong";
+import { Skeleton } from "../../shared/components";
 
 // Dashboard Song List Row Component
-export const SongListRow = ({ data, index, setSongToEdit }) => {
-  const { refreshAllData } = useData();
+export const SongListRow = ({ data, index, setSongToEdit, onDelete }) => {
   const [isDelete, setIsDelete] = useState(false);
-  const [{ allSongs, songIndex, isSongPlaying }, dispatch] = useStateValue();
+  const [{ songIndex, isSongPlaying }, dispatch] = useStateValue();
 
-  const deleteData = (data) => {
-    // Delete logic refactored for the list row
-    const deleteRef = ref(storage, data.imageURL);
-    deleteObject(deleteRef).then(() => {});
+  const handleDelete = async () => {
+    try {
+      // Delete from Firebase Storage
+      const deleteRef = ref(storage, data.imageURL);
+      await deleteObject(deleteRef).catch(() => {});
 
-    const deleteSongRef = ref(storage, data.songURL);
-    deleteObject(deleteSongRef).then(() => {});
+      const deleteSongRef = ref(storage, data.songURL);
+      await deleteObject(deleteSongRef).catch(() => {});
 
-    deleteSongById(data._id).then((res) => {
-      if (res.data) {
-        refreshAllData();
-      }
-    });
+      // Delete from database using mutation
+      await onDelete(data._id);
+      setIsDelete(false);
+      toast.success(`"${data.name}" deleted successfully`);
+    } catch (error) {
+      toast.error("Failed to delete song");
+    }
   };
 
   const addToContext = () => {
@@ -103,7 +112,7 @@ export const SongListRow = ({ data, index, setSongToEdit }) => {
         </div>
       </div>
 
-      {/* Duration (Placeholder if not available in data) */}
+      {/* Duration */}
       <div className="text-xs text-gray-500 font-bold hidden sm:block">
         3:45
       </div>
@@ -145,7 +154,7 @@ export const SongListRow = ({ data, index, setSongToEdit }) => {
             <div className="flex gap-2">
               <button
                 className="flex-1 py-1 px-2 text-xs font-bold bg-red-500 text-white rounded hover:bg-red-600"
-                onClick={() => deleteData(data)}
+                onClick={handleDelete}
               >
                 Delete
               </button>
@@ -165,30 +174,30 @@ export const SongListRow = ({ data, index, setSongToEdit }) => {
 
 // DashboardSongs Component
 export default function DashboardSongs() {
-  const { fetchSongs } = useData();
   const [songFilter, setSongFilter] = useState("");
   const [isFocus, setIsFocus] = useState(false);
-  const [filteredSongs, setFilteredSongs] = useState(null);
   const [songToEdit, setSongToEdit] = useState(null);
-  const [{ allSongs }, dispatch] = useStateValue();
 
-  useEffect(() => {
-    fetchSongs();
-  }, [fetchSongs]);
+  // React Query hooks
+  const { data: songs, isLoading, refetch } = useSongs();
+  const deleteSongMutation = useDeleteSong();
 
-  useEffect(() => {
-    if (songFilter.length > 0) {
-      const filtered = allSongs.filter(
-        (data) => (data) =>
-          (data.artist && data.artist.toLowerCase().includes(songFilter)) ||
-          (data.language && data.language.toLowerCase().includes(songFilter)) ||
-          (data.name && data.name.toLowerCase().includes(songFilter))
-      );
-      setFilteredSongs(filtered);
-    } else {
-      setFilteredSongs(null);
-    }
-  }, [songFilter]);
+  // Memoized filtered songs
+  const filteredSongs = useMemo(() => {
+    if (!songs || songFilter.length === 0) return null;
+
+    const filter = songFilter.toLowerCase();
+    return songs.filter(
+      (song) =>
+        song.name?.toLowerCase().includes(filter) ||
+        (Array.isArray(song.artist)
+          ? song.artist.some((a) => a.toLowerCase().includes(filter))
+          : song.artist?.toLowerCase().includes(filter)) ||
+        song.language?.toLowerCase().includes(filter),
+    );
+  }, [songs, songFilter]);
+
+  const displaySongs = filteredSongs || songs;
 
   return (
     <div className="w-full flex flex-col gap-6 p-4">
@@ -199,8 +208,7 @@ export default function DashboardSongs() {
             Songs Library
           </span>
           <span className="text-xs text-gray-500 font-medium">
-            Total: {filteredSongs ? filteredSongs?.length : allSongs?.length}{" "}
-            songs
+            Total: {displaySongs?.length || 0} songs
           </span>
         </div>
 
@@ -225,10 +233,7 @@ export default function DashboardSongs() {
             {songFilter && (
               <AiOutlineClear
                 className="text-gray-400 hover:text-red-500 cursor-pointer transition-colors"
-                onClick={() => {
-                  setSongFilter("");
-                  setFilteredSongs(null);
-                }}
+                onClick={() => setSongFilter("")}
               />
             )}
           </div>
@@ -257,27 +262,38 @@ export default function DashboardSongs() {
         </div>
 
         <div className="flex flex-col gap-2 relative">
-          {filteredSongs !== null
-            ? filteredSongs.map((song, i) => (
-                <SongListRow
-                  key={song._id}
-                  data={song}
-                  index={i}
-                  setSongToEdit={setSongToEdit}
-                />
-              ))
-            : allSongs?.map((song, i) => (
-                <SongListRow
-                  key={song._id}
-                  data={song}
-                  index={i}
-                  setSongToEdit={setSongToEdit}
-                />
-              ))}
+          {/* Loading Skeletons */}
+          {isLoading &&
+            [...Array(5)].map((_, i) => (
+              <div
+                key={i}
+                className="w-full grid grid-cols-[auto_1fr_auto] md:grid-cols-[auto_1fr_1fr_auto_auto] gap-4 p-3 bg-white/30 rounded-lg"
+              >
+                <Skeleton className="w-12 h-12 rounded-lg" />
+                <div className="flex flex-col gap-2">
+                  <Skeleton className="w-32 h-4" variant="text" />
+                  <Skeleton className="w-20 h-3" variant="text" />
+                </div>
+                <Skeleton className="hidden md:block w-24 h-4" variant="text" />
+                <Skeleton className="hidden sm:block w-10 h-4" variant="text" />
+                <Skeleton className="w-16 h-8" variant="rect" />
+              </div>
+            ))}
+
+          {/* Songs List */}
+          {!isLoading &&
+            displaySongs?.map((song, i) => (
+              <SongListRow
+                key={song._id}
+                data={song}
+                index={i}
+                setSongToEdit={setSongToEdit}
+                onDelete={(id) => deleteSongMutation.mutateAsync(id)}
+              />
+            ))}
 
           {/* Empty State */}
-          {((filteredSongs && filteredSongs.length === 0) ||
-            (!allSongs && !filteredSongs)) && (
+          {!isLoading && (!displaySongs || displaySongs.length === 0) && (
             <div className="w-full py-20 flex flex-col items-center justify-center text-gray-400">
               <p>No songs found.</p>
             </div>
@@ -289,7 +305,7 @@ export default function DashboardSongs() {
         <EditSong
           data={songToEdit}
           close={() => setSongToEdit(null)}
-          refreshData={() => fetchSongs(true)}
+          refreshData={() => refetch()}
         />
       )}
     </div>
