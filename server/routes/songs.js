@@ -14,7 +14,7 @@ const {
 } = require("../src/middleware");
 
 const axios = require("axios");
-const mm = require("music-metadata");
+// const mm = require("music-metadata"); // Moved to dynamic import inside handler due to ESM
 
 /**
  * @route   POST /api/songs/save
@@ -44,6 +44,7 @@ router.post(
 
     let metadata = {};
     try {
+      const mm = await import("music-metadata");
       // Stream audio for metadata extraction
       const response = await axios({
         method: "get",
