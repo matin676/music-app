@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  getStorage,
   ref,
   getDownloadURL,
   uploadBytesResumable,
@@ -85,7 +84,7 @@ export const FileUploader = ({
     const imageFile = e.target.files[0];
     const storageRef = ref(
       storage,
-      `${isImage ? "Images" : "Audio"}/${Date.now()}-${imageFile.name}`
+      `${isImage ? "Images" : "Audio"}/${Date.now()}-${imageFile.name}`,
     );
     const uploadTask = uploadBytesResumable(storageRef, imageFile);
 
@@ -114,7 +113,7 @@ export const FileUploader = ({
             setAlert(null);
           }, 4000);
         });
-      }
+      },
     );
   };
 
@@ -161,6 +160,7 @@ export default function DashboardNewSong() {
   const [songName, setSongName] = useState("");
   const [audioAsset, setAudioAsset] = useState(null);
   const [duration, setDuration] = useState(null);
+  const [isPublic, setIsPublic] = useState(true);
   const audioRef = useRef();
 
   const [
@@ -218,6 +218,7 @@ export default function DashboardNewSong() {
         artist: artistFilter,
         language: languageFilter,
         category: filterTerm,
+        isPublic: isPublic,
       };
 
       saveNewSong(data).then(() => {
@@ -261,11 +262,28 @@ export default function DashboardNewSong() {
           />
           <FilterButtons filterData={allAlbums} flag={"Albums"} />
           <FilterButtons filterData={filterByLanguage} flag={"Language"} />
-          <FilterButtons
-            filterData={filters}
-            flag={"Category"}
-            multiple={true}
-          />
+          <div className="flex items-center gap-4">
+            <FilterButtons
+              filterData={filters}
+              flag={"Category"}
+              multiple={true}
+            />
+            <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg bg-white">
+              <input
+                type="checkbox"
+                id="isPublic"
+                className="w-5 h-5 cursor-pointer accent-blue-600"
+                checked={isPublic} // We need to add this state
+                onChange={(e) => setIsPublic(e.target.checked)}
+              />
+              <label
+                htmlFor="isPublic"
+                className="text-sm font-semibold text-headingColor cursor-pointer"
+              >
+                Public
+              </label>
+            </div>
+          </div>
         </div>
 
         <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -391,7 +409,7 @@ export const AddNewArtist = () => {
   const [twitter, setTwitter] = useState("");
   const [instagram, setInstagram] = useState("");
 
-  const [{ allArtists }, dispatch] = useStateValue();
+  const { refreshAllData } = useData();
   const timeoutRef = useRef(null);
 
   useEffect(() => {
@@ -556,7 +574,7 @@ export const AddNewAlbum = () => {
 
   const [albumName, setAlbumName] = useState("");
 
-  const [{ allAlbums }, dispatch] = useStateValue();
+  const { refreshAllData } = useData();
   const timeoutRef = useRef(null);
 
   useEffect(() => {

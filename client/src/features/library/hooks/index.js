@@ -35,3 +35,4 @@ export {
   useDeletePlaylist,
   playlistKeys,
 } from "./usePlaylists";
+export { useStats } from "./useStats";

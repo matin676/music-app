@@ -11,6 +11,7 @@ import { RiUserStarFill } from "react-icons/ri";
 
 import { useSongs, useArtists, useAlbums } from "../../features/library/hooks";
 import { useUsers } from "../../features/admin/hooks";
+import DashboardStats from "./DashboardStats";
 
 export const DashboardCard = ({
   icon,
@@ -90,6 +91,12 @@ export default function DashboardHome() {
         hoverColor="bg-orange-500"
         isLoading={albumsLoading}
       />
+
+      {/* Analytics Section */}
+      <div className="col-span-1 md:col-span-2 lg:col-span-4 mt-6">
+        <h2 className="text-xl font-bold text-headingColor mb-4">Analytics</h2>
+        <DashboardStats />
+      </div>
     </div>
   );
 }

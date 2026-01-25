@@ -29,12 +29,34 @@ const songSchema = mongoose.Schema(
       type: [String],
       required: true,
     },
+    isPublic: {
+      type: Boolean,
+      default: true,
+    },
+    duration: {
+      type: Number, // in seconds
+    },
+    bitrate: {
+      type: Number,
+    },
+    format: {
+      type: String,
+    },
+    playCount: {
+      type: Number,
+      default: 0,
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-songSchema.index({ name: 1 });
-songSchema.index({ artist: 1 });
-songSchema.index({ language: 1 });
+// Text index for fuzzy search
+songSchema.index({
+  name: "text",
+  artist: "text",
+  album: "text",
+  language: "text",
+  category: "text",
+});
 
 module.exports = mongoose.model("song", songSchema);

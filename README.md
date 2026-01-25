@@ -8,9 +8,10 @@ A modern, full-stack music streaming platform designed for a premium user experi
 
 - **Authentication**: Secure Google Sign-in via Firebase
 - **Dynamic Discovery**:
-  - **Featured Track**: Automatically rotates every 6 minutes
+  - **Featured Track**: Analytics-driven, showcasing Top 5 most-played songs
+  - **Play Count Tracking**: Automatically tracks song popularity
   - **Filtering**: By Artist, Album, Language, and Category
-  - **Search**: Real-time search for songs, artists, and albums
+  - **Search**: Real-time fuzzy search for songs, artists, and albums
 - **Music Player**:
   - Full playback control (Play, Pause, Next, Prev, Seek)
   - Shuffle and Repeat modes

@@ -8,6 +8,7 @@ import React, { useEffect, useMemo, useCallback } from "react";
 import { IoArrowUp } from "react-icons/io5";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
+import Fuse from "fuse.js";
 
 import Header from "../Shared/Header";
 import Filter from "../Shared/Filter";
@@ -22,9 +23,6 @@ import SEO from "../Shared/SEO";
 import { SongCardSkeleton } from "../../shared/components";
 
 export default function Home() {
-  // React Query - songs data with automatic caching
-  const { data: songs, isLoading } = useSongs();
-
   // Context for filters and favourites (still needed for cross-component state)
   const [
     {
@@ -39,6 +37,80 @@ export default function Home() {
     dispatch,
   ] = useStateValue();
 
+  // Debounce search term
+  const [debouncedSearch, setDebouncedSearch] = React.useState(searchTerm);
+
+  React.useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  // ... inside component
+  // React Query - fetch all public songs (Client-side filtering is smoother for fuzzy search)
+  const { data: songs, isLoading } = useSongs({ isPublic: true });
+
+  // Filter Logic
+  const filteredSongs = useMemo(() => {
+    if (!songs) return [];
+
+    let result = songs;
+
+    // 1. Fuzzy Search
+    if (debouncedSearch) {
+      const fuse = new Fuse(result, {
+        keys: ["name", "artist", "album", "category", "language"],
+        threshold: 0.4, // Matches "untopp" -> "Unstoppable"
+        distance: 100,
+      });
+      result = fuse.search(debouncedSearch).map((r) => r.item);
+    }
+
+    // 2. Exact Filters
+    if (filterTerm) {
+      result = result.filter((song) => {
+        // Handle array or string category
+        const cats = Array.isArray(song.category)
+          ? song.category
+          : [song.category];
+        return cats.some((c) => c.toLowerCase() === filterTerm.toLowerCase());
+      });
+    }
+
+    if (artistFilter) {
+      result = result.filter((song) => {
+        const artists = Array.isArray(song.artist)
+          ? song.artist
+          : [song.artist];
+        return artists.some(
+          (a) => a.toLowerCase() === artistFilter.toLowerCase(),
+        );
+      });
+    }
+
+    if (albumFilter) {
+      result = result.filter(
+        (song) => song.album?.toLowerCase() === albumFilter.toLowerCase(),
+      );
+    }
+
+    if (languageFilter) {
+      result = result.filter(
+        (song) => song.language?.toLowerCase() === languageFilter.toLowerCase(),
+      );
+    }
+
+    return result;
+  }, [
+    songs,
+    debouncedSearch,
+    filterTerm,
+    artistFilter,
+    albumFilter,
+    languageFilter,
+  ]);
+
   // Sync songs to context for player compatibility
   useEffect(() => {
     if (songs && songs.length > 0) {
@@ -46,34 +118,63 @@ export default function Home() {
     }
   }, [songs, dispatch]);
 
-  // Dynamic Featured Song Logic
+  // Dynamic Featured Song Logic (Analytics Based)
   const [featuredIndex, setFeaturedIndex] = React.useState(0);
   const isHoverRef = React.useRef(false);
 
-  useEffect(() => {
-    if (songs && songs.length > 0) {
-      const randomIndex = Math.floor(Math.random() * songs.length);
-      setFeaturedIndex(randomIndex);
-    }
+  // Derive top songs based on playCount
+  const topSongs = useMemo(() => {
+    if (!songs || songs.length === 0) return [];
+    // Sort by playCount desc, then by createdAt desc
+    return [...songs]
+      .sort((a, b) => (b.playCount || 0) - (a.playCount || 0))
+      .slice(0, 5);
   }, [songs]);
 
+  // Set initial featured song (Top #1)
   useEffect(() => {
-    if (songs && songs.length > 0) {
+    if (topSongs && topSongs.length > 0) {
+      // Find the index of the top song in the main 'songs' array
+      const topSong = topSongs[0];
+      const index = songs.findIndex((s) => s._id === topSong._id);
+      if (index !== -1) setFeaturedIndex(index);
+    }
+  }, [topSongs, songs]);
+
+  // Cycle through top 5 popular songs
+  useEffect(() => {
+    if (topSongs && topSongs.length > 0 && songs && songs.length > 0) {
       const interval = setInterval(() => {
         if (!isHoverRef.current) {
           setFeaturedIndex((prev) => {
-            let nextIndex = Math.floor(Math.random() * songs.length);
-            if (nextIndex === prev && songs.length > 1) {
-              nextIndex = (prev + 1) % songs.length;
+            // Find current song in topSongs
+            const currentSong = songs[prev];
+            const currentTopIndex = topSongs.findIndex(
+              (s) => s._id === currentSong?._id,
+            );
+
+            let nextTopIndex = 0;
+            if (
+              currentTopIndex !== -1 &&
+              currentTopIndex < topSongs.length - 1
+            ) {
+              nextTopIndex = currentTopIndex + 1;
             }
-            return nextIndex;
+
+            // Get the next song from topSongs and find its index in the main list
+            const nextSong = topSongs[nextTopIndex];
+            const nextMainIndex = songs.findIndex(
+              (s) => s._id === nextSong._id,
+            );
+
+            return nextMainIndex !== -1 ? nextMainIndex : 0;
           });
         }
-      }, 360000); // 6 minutes
+      }, 10000); // 10 seconds per featured track
 
       return () => clearInterval(interval);
     }
-  }, [songs]);
+  }, [topSongs, songs]);
 
   const handleMouseEnter = () => {
     isHoverRef.current = true;
@@ -97,69 +198,6 @@ export default function Home() {
   const goToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-
-  // Memoized filtering logic
-  const filteredSongs = useMemo(() => {
-    if (!songs) return null;
-
-    if (searchTerm && searchTerm.length > 0) {
-      return songs.filter((data) => {
-        const artistMatch = Array.isArray(data.artist)
-          ? data.artist.some(
-              (a) =>
-                typeof a === "string" &&
-                a.toLowerCase().includes(searchTerm.toLowerCase()),
-            )
-          : typeof data.artist === "string" &&
-            data.artist.toLowerCase().includes(searchTerm.toLowerCase());
-
-        const languageMatch =
-          typeof data.language === "string" &&
-          data.language.toLowerCase().includes(searchTerm.toLowerCase());
-        const nameMatch =
-          typeof data.name === "string" &&
-          data.name.toLowerCase().includes(searchTerm.toLowerCase());
-
-        return artistMatch || languageMatch || nameMatch;
-      });
-    }
-
-    if (artistFilter) {
-      return songs.filter((data) =>
-        Array.isArray(data.artist)
-          ? data.artist.includes(artistFilter)
-          : data.artist === artistFilter,
-      );
-    }
-
-    if (albumFilter) {
-      return songs.filter((data) => data.album === albumFilter);
-    }
-
-    if (languageFilter) {
-      return songs.filter((data) => data.language === languageFilter);
-    }
-
-    if (filterTerm) {
-      return songs.filter((data) =>
-        Array.isArray(data.category)
-          ? data.category.some(
-              (c) => typeof c === "string" && c.toLowerCase() === filterTerm,
-            )
-          : typeof data.category === "string" &&
-            data.category.toLowerCase() === filterTerm,
-      );
-    }
-
-    return null;
-  }, [
-    searchTerm,
-    artistFilter,
-    albumFilter,
-    languageFilter,
-    filterTerm,
-    songs,
-  ]);
 
   // Toggle favorite handler
   const toggleFavorite = useCallback(

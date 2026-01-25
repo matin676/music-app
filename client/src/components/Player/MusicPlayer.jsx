@@ -16,6 +16,7 @@ import AudioPlayer from "react-h5-audio-player";
 import "react-h5-audio-player/lib/styles.css";
 import { actionType } from "../../context/reducer";
 import { RiPlayListFill } from "react-icons/ri";
+import { songsApi } from "../../services/api/songs";
 
 export default function MusicPlayer() {
   const [isPlayList, setIsPlayList] = useState(false);
@@ -103,6 +104,19 @@ export default function MusicPlayer() {
     if (activeSongs && songIndex > activeSongs.length) {
       dispatch({ type: actionType.SET_SONG_INDEX, songIndex: 0 });
     }
+  }, [songIndex, activeSongs]);
+
+  // Analytics: Increment Play Count after 5 seconds
+  useEffect(() => {
+    let timer;
+    if (activeSongs && activeSongs[songIndex]) {
+      const songId = activeSongs[songIndex]._id;
+      // Count plays to track popularity for featured tracks
+      timer = setTimeout(() => {
+        songsApi.incrementPlayCount(songId).catch(() => {});
+      }, 5000); // 5 seconds threshold
+    }
+    return () => clearTimeout(timer);
   }, [songIndex, activeSongs]);
 
   // Hardware Media Session API

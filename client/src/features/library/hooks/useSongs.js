@@ -16,10 +16,16 @@ export const songKeys = {
 /**
  * Fetch all songs
  */
-export const useSongs = (options = {}) => {
+/**
+ * Fetch all songs with optional filters
+ * @param {Object} filters - Search, genre, sorting, etc.
+ * @param {Object} options - React Query options
+ */
+export const useSongs = (filters = {}, options = {}) => {
   return useQuery({
-    queryKey: songKeys.all,
-    queryFn: songsApi.getAll,
+    queryKey: [...songKeys.all, filters],
+    queryFn: () => songsApi.getAll(filters),
+    keepPreviousData: true, // Keep old data while fetching new filter results
     ...options,
   });
 };

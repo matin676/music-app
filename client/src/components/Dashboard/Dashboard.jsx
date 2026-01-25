@@ -9,8 +9,6 @@ import DashboardSongs from "./DashboardSongs";
 import DashboardArtists from "./DashboardArtists";
 import DashboardAlbums from "./DashboardAlbums";
 import DashboardNewSong from "./DashboardNewSong";
-import { isActiveStyles, isNotActiveStyles } from "../../utils/styles";
-import { useStateValue } from "../../context/StateProvider";
 
 export default function Dashboard() {
   return (

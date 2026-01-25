@@ -44,11 +44,6 @@ export const useAuth = () => {
         });
         setIsLoading(false);
         window.localStorage.setItem("auth", "false");
-        window.localStorage.setItem("auth", "false");
-        // Do not redirect to login automatically. Allow guest access.
-        // if (window.location.pathname !== "/login") {
-        //   navigate("/login");
-        // }
       }
     });
 

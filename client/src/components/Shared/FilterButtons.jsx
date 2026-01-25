@@ -5,7 +5,7 @@ import React, {
   useLayoutEffect,
   memo,
 } from "react";
-import { IoChevronDown } from "react-icons/io5";
+import { IoChevronDown, IoCheckmark } from "react-icons/io5";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
 
@@ -47,24 +47,24 @@ const FilterButtons = ({ flag, filterData, multiple }) => {
     // If multiple, filterName logic is different (maybe show "X selected" or list first few)
     // For now, let's keep it simple or update it based on selection
     if (!multiple) {
-      if (flag === "Artist" && !artistFilter) setFilterName(null);
-      if (flag === "Albums" && !albumFilter) setFilterName(null);
-      if (flag === "Language" && !languageFilter) setFilterName(null);
-      if (flag === "Category" && !filterTerm) setFilterName(null);
+      if (flag === "Artist") setFilterName(artistFilter || null);
+      if (flag === "Albums") setFilterName(albumFilter || null);
+      if (flag === "Language") setFilterName(languageFilter || null);
+      if (flag === "Category") setFilterName(filterTerm || null);
     } else {
       // Multi-select display logic
       if (flag === "Artist") {
         setFilterName(
           artistFilter && artistFilter.length > 0
             ? `${artistFilter.length} selected`
-            : null
+            : null,
         );
       }
       if (flag === "Category") {
         setFilterName(
           filterTerm && filterTerm.length > 0
             ? `${filterTerm.length} selected`
-            : null
+            : null,
         );
       }
     }
@@ -188,10 +188,12 @@ const FilterButtons = ({ flag, filterData, multiple }) => {
                     className={`flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 hover:bg-gray-100/50 transition-colors cursor-pointer ${
                       multiple &&
                       ((flag === "Artist" &&
-                        artistFilter?.includes(data.value || data.name)) ||
+                        (artistFilter?.includes(data.value) ||
+                          artistFilter?.includes(data.name))) ||
                         (flag === "Category" &&
-                          filterTerm?.includes(data.value || data.name)))
-                        ? "bg-blue-50"
+                          (filterTerm?.includes(data.value) ||
+                            filterTerm?.includes(data.name))))
+                        ? "bg-purple-200"
                         : ""
                     }`}
                     onClick={() =>
@@ -205,6 +207,17 @@ const FilterButtons = ({ flag, filterData, multiple }) => {
                         className="w-8 min-w-[32px] h-8 rounded-full object-cover shadow-sm"
                       />
                     )}
+                    {/* Checkmark for visually distinct selection */}
+                    {multiple &&
+                      ((flag === "Artist" &&
+                        (artistFilter?.includes(data.value) ||
+                          artistFilter?.includes(data.name))) ||
+                        (flag === "Category" &&
+                          (filterTerm?.includes(data.value) ||
+                            filterTerm?.includes(data.name)))) && (
+                        <IoCheckmark className="text-purple-600 shrink-0" />
+                      )}
+
                     <p className="w-full text-headingColor text-sm font-medium truncate">
                       {data.name.length > 15
                         ? `${data.name.slice(0, 15)}...`
@@ -215,7 +228,7 @@ const FilterButtons = ({ flag, filterData, multiple }) => {
               </motion.div>
             )}
           </AnimatePresence>,
-          document.body
+          document.body,
         )}
     </>
   );

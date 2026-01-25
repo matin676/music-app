@@ -40,10 +40,19 @@ export const getAllAlbums = async () => {
   }
 };
 
-export const getAllSongs = async () => {
+export const getAllSongs = async (params = {}) => {
   try {
-    const res = await apiClient.get("api/songs/getall");
-    return res.data;
+    const res = await apiClient.get("api/songs/getall", { params });
+    return res.data?.data || [];
+  } catch (error) {
+    return null;
+  }
+};
+
+export const getStats = async () => {
+  try {
+    const res = await apiClient.get("api/songs/stats");
+    return res.data?.data || null;
   } catch (error) {
     return null;
   }

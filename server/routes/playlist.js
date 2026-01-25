@@ -7,11 +7,7 @@
 const router = require("express").Router();
 const Playlist = require("../models/playlist");
 const ApiResponse = require("../src/utils/apiResponse");
-const {
-  authenticate,
-  asyncHandler,
-  attachDbUser,
-} = require("../src/middleware");
+const { authenticate, asyncHandler } = require("../src/middleware");
 
 /**
  * @route   POST /api/playlists/savePlaylist
@@ -88,8 +84,8 @@ router.get(
       return ApiResponse.notFound(res, "Playlist not found");
     }
 
-    // Check ownership
-    if (playlist.user !== req.user._id) {
+    // Check ownership (use toString() to handle ObjectId vs String comparison)
+    if (playlist.user.toString() !== req.user._id.toString()) {
       return ApiResponse.forbidden(res, "You can only view your own playlists");
     }
 
@@ -117,8 +113,8 @@ router.put(
       return ApiResponse.notFound(res, "Playlist not found");
     }
 
-    // Check ownership
-    if (playlist.user !== req.user._id) {
+    // Check ownership (use toString() to handle ObjectId vs String comparison)
+    if (playlist.user.toString() !== req.user._id.toString()) {
       return ApiResponse.forbidden(
         res,
         "You can only update your own playlists",
@@ -159,8 +155,8 @@ router.put(
       return ApiResponse.notFound(res, "Playlist not found");
     }
 
-    // Check ownership
-    if (playlist.user !== req.user._id) {
+    // Check ownership (use toString() to handle ObjectId vs String comparison)
+    if (playlist.user.toString() !== req.user._id.toString()) {
       return ApiResponse.forbidden(
         res,
         "You can only modify your own playlists",
@@ -200,8 +196,8 @@ router.put(
       return ApiResponse.notFound(res, "Playlist not found");
     }
 
-    // Check ownership
-    if (playlist.user !== req.user._id) {
+    // Check ownership (use toString() to handle ObjectId vs String comparison)
+    if (playlist.user.toString() !== req.user._id.toString()) {
       return ApiResponse.forbidden(
         res,
         "You can only modify your own playlists",
@@ -234,8 +230,8 @@ router.delete(
       return ApiResponse.notFound(res, "Playlist not found");
     }
 
-    // Check ownership
-    if (playlist.user !== req.user._id) {
+    // Check ownership (use toString() to handle ObjectId vs String comparison)
+    if (playlist.user.toString() !== req.user._id.toString()) {
       return ApiResponse.forbidden(
         res,
         "You can only delete your own playlists",

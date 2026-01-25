@@ -1,10 +1,9 @@
-import { useState, useEffect, Suspense, lazy } from "react";
-import { Route, Routes, useNavigate, Navigate } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, Suspense, lazy } from "react";
+import { Route, Routes, Navigate } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
 
 import { Loader } from "./components";
 import { ErrorBoundary } from "./shared/components";
-import { app } from "./config/firebase.config";
 import { useStateValue } from "./context/StateProvider";
 import { actionType } from "./context/reducer";
 import "./App.css";
@@ -31,7 +30,7 @@ import { useData } from "./hooks/useData";
 function App() {
   const { isLoading, setAuth } = useAuth();
   const { fetchSongs } = useData();
-  const [{ user, allSongs, songIndex, isSongPlaying, miniPlayer }, dispatch] =
+  const [{ user, allSongs, songIndex, isSongPlaying }, dispatch] =
     useStateValue();
 
   useEffect(() => {

@@ -11,9 +11,9 @@ export const songsApi = {
    * Get all songs
    * @returns {Promise<Object[]>} Array of songs
    */
-  getAll: async () => {
-    const response = await apiClient.get("/api/songs/getall");
-    return response.data; // Extract data from standardized response
+  getAll: async (params = {}) => {
+    const response = await apiClient.get("/api/songs/getall", { params });
+    return response.data || [];
   },
 
   /**
@@ -44,6 +44,16 @@ export const songsApi = {
    */
   update: async (id, songData) => {
     const response = await apiClient.put(`/api/songs/update/${id}`, songData);
+    return response.data;
+  },
+
+  /**
+   * Increment song play count
+   * @param {string} id - Song ID
+   * @returns {Promise<Object>} Updated song
+   */
+  incrementPlayCount: async (id) => {
+    const response = await apiClient.put(`/api/songs/play/${id}`);
     return response.data;
   },
 

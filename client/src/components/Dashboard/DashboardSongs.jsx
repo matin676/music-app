@@ -18,7 +18,7 @@ import { storage } from "../../config/firebase.config";
 import SongCard from "../Cards/SongCard";
 import { useSongs, useDeleteSong } from "../../features/library/hooks";
 import EditSong from "./EditSong";
-import { Skeleton } from "../../shared/components";
+import { Skeleton, SongRowSkeleton } from "../../shared/components";
 
 // Dashboard Song List Row Component
 export const SongListRow = ({ data, index, setSongToEdit, onDelete }) => {
@@ -76,10 +76,15 @@ export const SongListRow = ({ data, index, setSongToEdit, onDelete }) => {
       {/* Name & Artist */}
       <div className="flex flex-col min-w-0">
         <p
-          className="text-xs md:text-sm font-bold text-headingColor truncate"
+          className="text-xs md:text-sm font-bold text-headingColor truncate flex items-center gap-2"
           title={data.name}
         >
           {data.name}
+          {data.isPublic === false && (
+            <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full border border-red-200 uppercase font-bold tracking-wide">
+              Private
+            </span>
+          )}
         </p>
         <p
           className="text-[10px] md:text-xs text-gray-500 font-semibold truncate"
@@ -179,25 +184,26 @@ export default function DashboardSongs() {
   const [songToEdit, setSongToEdit] = useState(null);
 
   // React Query hooks
-  const { data: songs, isLoading, refetch } = useSongs();
+  // React Query hooks
+  // Debounce filter for API performance
+  const [debouncedFilter, setDebouncedFilter] = useState("");
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedFilter(songFilter);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [songFilter]);
+
+  const {
+    data: songs,
+    isLoading,
+    refetch,
+  } = useSongs({ search: debouncedFilter }); // Server-side search
   const deleteSongMutation = useDeleteSong();
 
-  // Memoized filtered songs
-  const filteredSongs = useMemo(() => {
-    if (!songs || songFilter.length === 0) return null;
-
-    const filter = songFilter.toLowerCase();
-    return songs.filter(
-      (song) =>
-        song.name?.toLowerCase().includes(filter) ||
-        (Array.isArray(song.artist)
-          ? song.artist.some((a) => a.toLowerCase().includes(filter))
-          : song.artist?.toLowerCase().includes(filter)) ||
-        song.language?.toLowerCase().includes(filter),
-    );
-  }, [songs, songFilter]);
-
-  const displaySongs = filteredSongs || songs;
+  // With server-side filtering, 'songs' already contains the filtered list
+  const displaySongs = songs;
 
   return (
     <div className="w-full flex flex-col gap-6 p-4">
@@ -264,21 +270,7 @@ export default function DashboardSongs() {
         <div className="flex flex-col gap-2 relative">
           {/* Loading Skeletons */}
           {isLoading &&
-            [...Array(5)].map((_, i) => (
-              <div
-                key={i}
-                className="w-full grid grid-cols-[auto_1fr_auto] md:grid-cols-[auto_1fr_1fr_auto_auto] gap-4 p-3 bg-white/30 rounded-lg"
-              >
-                <Skeleton className="w-12 h-12 rounded-lg" />
-                <div className="flex flex-col gap-2">
-                  <Skeleton className="w-32 h-4" variant="text" />
-                  <Skeleton className="w-20 h-3" variant="text" />
-                </div>
-                <Skeleton className="hidden md:block w-24 h-4" variant="text" />
-                <Skeleton className="hidden sm:block w-10 h-4" variant="text" />
-                <Skeleton className="w-16 h-8" variant="rect" />
-              </div>
-            ))}
+            [...Array(5)].map((_, i) => <SongRowSkeleton key={i} />)}
 
           {/* Songs List */}
           {!isLoading &&
